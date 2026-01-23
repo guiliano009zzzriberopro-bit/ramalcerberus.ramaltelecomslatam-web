@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CERBERUS | RAMAL</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
         :root { --azul: #1A365D; --oro: #FFD700; --fondo: #F4F7FE; }
@@ -21,6 +22,7 @@
         .seccion { display: none; } 
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
         
+        #mapa-contenedor { height: 500px; width: 100%; border-radius: 12px; border: 3px solid var(--azul); z-index: 1; }
         .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .input-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; margin-bottom: 20px; }
         
@@ -29,18 +31,22 @@
         th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; font-size: 11px; }
         th { background: #f8f8f8; color: var(--azul); }
         
-        /* Estilos Editables */
-        .editable-cell { border: 1px solid transparent; background: transparent; padding: 4px; border-radius: 4px; width: 100%; }
+        .editable-cell { border: 1px solid transparent; background: transparent; padding: 4px; border-radius: 4px; width: 100%; font-weight: bold; }
         .editable-cell:hover { border: 1px solid #ddd; background: #fff; }
-        .editable-cell:focus { border: 1px solid var(--oro); background: #fffde7; outline: none; }
 
         .btn-accion { padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: white; margin: 2px; }
-        .bg-verde { background: #48BB78; } .bg-rojo { background: #F56565; } .bg-azul { background: #4299E1; }
-        .btn-pdf { background: #718096; }
+        .bg-verde { background: #48BB78; } .bg-rojo { background: #F56565; } .bg-azul { background: #4299E1; } .bg-gris { background: #718096; }
         
         .badge { padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; color: white; }
         .bg-ramal { background: #2b6cb0; } .bg-andretho { background: #805ad5; }
-        .st-prog { color: #B7791F; font-weight: bold; } .st-ejec { color: #2F855A; font-weight: bold; }
+        
+        /* Estados */
+        .st-Programada { color: #B7791F; font-weight: bold; }
+        .st-Ejecutada { color: #2F855A; font-weight: bold; }
+        .st-Suspendida { color: #C53030; font-weight: bold; }
+        .st-Cancelada { color: #718096; font-weight: bold; }
+
+        h3 { margin-top: 20px; color: var(--azul); border-left: 4px solid var(--oro); padding-left: 10px; }
     </style>
 </head>
 <body>
@@ -48,6 +54,7 @@
     <div class="sidebar">
         <h2>CERBERUS</h2>
         <button class="btn-menu active" onclick="abrir('panel', this)"><i class="fas fa-chart-line"></i> Panel General</button>
+        <button class="btn-menu" onclick="abrir('mapa-seccion', this); initMap();"><i class="fas fa-map-marked-alt"></i> Mapa de Red</button>
         <button class="btn-menu" onclick="abrir('facturacion', this)"><i class="fas fa-file-invoice"></i> Facturación</button>
         <button class="btn-menu" onclick="abrir('inventario', this)"><i class="fas fa-boxes"></i> Inventario</button>
         <button class="btn-menu" onclick="abrir('tickets', this)"><i class="fas fa-tools"></i> Tickets</button>
@@ -60,27 +67,32 @@
             <h1>Panel de Control</h1>
             <div class="card">
                 <h3>Estado del Sistema</h3>
-                <p id="cloud-status" style="color: #48BB78;"><i class="fas fa-cloud"></i> Sincronización en la nube activa</p>
+                <p style="color: #48BB78;"><i class="fas fa-cloud"></i> Sincronización en la nube activa</p>
+            </div>
+        </div>
+
+        <div id="mapa-seccion" class="seccion">
+            <h1>Infraestructura Satelital</h1>
+            <div class="card"><div id="mapa-contenedor"></div></div>
+            <div class="card">
+                <h3>Estado de Puertos y Empresa (Cajas NAP)</h3>
+                <table id="tb-naps-container">
+                    <thead><tr><th>Nombre</th><th>Empresa</th><th>Coordenadas</th><th>Ocupados</th><th>Libres</th></tr></thead>
+                    <tbody id="tb-naps"></tbody>
+                </table>
             </div>
         </div>
 
         <div id="facturacion" class="seccion">
             <div class="header-flex">
                 <h1>Facturación</h1>
-                <div>
-                    <button class="btn-accion bg-azul" onclick="reporteDiario()">Reporte Diario</button>
-                    <button class="btn-accion btn-pdf" onclick="exportarPDF('Facturacion', 'tb-f-container')">PDF</button>
-                </div>
+                <div><button class="btn-accion bg-azul" onclick="reporteDiario()">Reporte Diario</button> <button class="btn-accion bg-gris" onclick="exportarPDF('Facturacion', 'tb-f-container')">PDF</button></div>
             </div>
             <div class="card">
                 <div class="input-group">
-                    <input type="text" id="fn" placeholder="N° Fact">
-                    <input type="text" id="fc" placeholder="Cliente">
-                    <input type="number" id="fm" placeholder="Monto">
+                    <input type="text" id="fn" placeholder="N° Fact"> <input type="text" id="fc" placeholder="Cliente"> <input type="number" id="fm" placeholder="Monto">
                     <select id="fo"><option value="RAMAL">RAMAL</option><option value="ANDRETHO">ANDRETHO</option></select>
-                    <input type="text" id="fs" placeholder="Secretaria">
-                    <input type="date" id="ff">
-                    <input type="time" id="fh">
+                    <input type="text" id="fs" placeholder="Secretaria"> <input type="date" id="ff"> <input type="time" id="fh">
                     <button class="btn-accion bg-verde" onclick="addF()">Guardar</button>
                 </div>
                 <table id="tb-f-container">
@@ -91,47 +103,48 @@
         </div>
 
         <div id="inventario" class="seccion">
-            <div class="header-flex">
-                <h1>Inventario</h1>
-                <button class="btn-accion btn-pdf" onclick="exportarPDF('Inventario', 'tb-i-container')">PDF</button>
-            </div>
+            <div class="header-flex"><h1>Inventario</h1> <button class="btn-accion bg-gris" onclick="exportarPDF('Inventario', 'tb-i-container')">PDF</button></div>
             <div class="card">
-                <div class="input-group">
-                    <input type="text" id="in" placeholder="Material">
-                    <input type="number" id="ic" placeholder="Cantidad Inicial">
-                    <button class="btn-accion bg-verde" onclick="addI()">Añadir</button>
-                </div>
-                <table id="tb-i-container">
-                    <thead><tr><th>Material</th><th>Stock (Editable)</th><th>Acción</th></tr></thead>
-                    <tbody id="tb-i"></tbody>
-                </table>
+                <div class="input-group"><input type="text" id="in" placeholder="Material"> <input type="number" id="ic" placeholder="Cantidad"> <button class="btn-accion bg-verde" onclick="addI()">Añadir</button></div>
+                <table id="tb-i-container"><thead><tr><th>Material</th><th>Stock</th><th>Acción</th></tr></thead><tbody id="tb-i"></tbody></table>
             </div>
         </div>
 
         <div id="tickets" class="seccion">
             <div class="header-flex">
                 <h1>Gestión de Tickets</h1>
-                <button class="btn-accion btn-pdf" onclick="exportarPDF('Tickets', 'tb-t-prog-container')">PDF</button>
+                <button class="btn-accion bg-gris" onclick="exportarPDF('Tickets', 'tb-t-full')">Exportar Todo PDF</button>
             </div>
+            
             <div class="card">
                 <div class="input-group">
                     <input type="text" id="tc" placeholder="Cliente">
                     <input type="text" id="ttel" placeholder="Contacto">
                     <input type="text" id="tder" placeholder="Derivado">
                     <input type="text" id="tz" placeholder="Zona/Barrio">
+                    <input type="text" id="tcoor" placeholder="Coordenadas">
+                    <select id="tempre"><option value="RAMAL">RAMAL</option><option value="ANDRETHO">ANDRETHO</option></select>
                     <select id="tt"><option>Instalación Fibra</option><option>Instalación TV</option><option>Mantenimiento FTTH</option><option>Mantenimiento RG6</option></select>
-                    <input type="text" id="ttec" placeholder="Técnico"><input type="date" id="tf"><input type="time" id="th">
+                    <input type="text" id="ttec" placeholder="Técnico"><input type="date" id="tf"><input type="time" id="th_ticket">
                     <button class="btn-accion bg-verde" onclick="addT()">Programar</button>
                 </div>
-                <h3>Pendientes / En Curso</h3>
-                <table id="tb-t-prog-container">
-                    <thead><tr><th>Cliente</th><th>Contacto</th><th>Derivado</th><th>Zona/Barrio</th><th>Tipo</th><th>Técnico</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
+
+                <h3>PENDIENTES (RAMAL / ANDRETHO)</h3>
+                <table id="tb-t-pend">
+                    <thead><tr><th>Empresa</th><th>Cliente</th><th>Contacto</th><th>Zona</th><th>Coord.</th><th>Tipo</th><th>Técnico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Acción</th></tr></thead>
                     <tbody id="tb-t-prog"></tbody>
                 </table>
-                <h3>Historial Ejecutados</h3>
-                <table id="tb-t-ejec-container">
-                    <thead><tr><th>Cliente</th><th>Contacto</th><th>Derivado</th><th>Zona/Barrio</th><th>Tipo</th><th>Técnico</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
-                    <tbody id="tb-t-ejec"></tbody>
+
+                <h3>HISTORIAL EJECUTADOS - RAMAL</h3>
+                <table id="tb-h-ramal">
+                    <thead><tr><th>Cliente</th><th>Zona</th><th>Tipo</th><th>Técnico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>X</th></tr></thead>
+                    <tbody id="tb-t-h-ramal"></tbody>
+                </table>
+
+                <h3>HISTORIAL EJECUTADOS - ANDRETHO</h3>
+                <table id="tb-h-and">
+                    <thead><tr><th>Cliente</th><th>Zona</th><th>Tipo</th><th>Técnico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>X</th></tr></thead>
+                    <tbody id="tb-t-h-and"></tbody>
                 </table>
             </div>
         </div>
@@ -141,6 +154,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
         const firebaseConfig = {
@@ -154,28 +168,71 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        let map;
+        const cajasKML = [
+            { n: "NAP 1", e: "ANDRETHO", co: [-17.395333, -67.130386], o: 10, l: 6 },
+            { n: "NAP 2", e: "ANDRETHO", co: [-17.393822, -67.130833], o: 5, l: 11 },
+            { n: "NAP 3", e: "ANDRETHO", co: [-17.393844, -67.128867], o: 11, l: 5 },
+            { n: "NAP 4", e: "ANDRETHO", co: [-17.394142, -67.127419], o: 0, l: 16 },
+            { n: "NAP 5", e: "ANDRETHO", co: [-17.390883, -67.127392], o: 0, l: 16 },
+            { n: "NAP 6", e: "ANDRETHO", co: [-17.390236, -67.126131], o: 11, l: 5 },
+            { n: "NAP 7", e: "ANDRETHO", co: [-17.390978, -67.125139], o: 0, l: 16 },
+            { n: "NAP 8", e: "ANDRETHO", co: [-17.389606, -67.125742], o: 8, l: 8 },
+            { n: "NAP 9", e: "ANDRETHO", co: [-17.388839, -67.126861], o: 0, l: 16 },
+            { n: "NAP 10", e: "ANDRETHO", co: [-17.393117, -67.124564], o: 0, l: 16 },
+            { n: "NAP 11", e: "ANDRETHO", co: [-17.392846, -67.124257], o: 1, l: 15 },
+            { n: "NAP 12", e: "ANDRETHO", co: [-17.389033, -67.124375], o: 10, l: 6 },
+            { n: "ODN 1", e: "ANDRETHO", co: [-17.395156, -67.130181], o: 0, l: 0 },
+            { n: "ODN 2", e: "ANDRETHO", co: [-17.390639, -67.125603], o: 0, l: 0 },
+            { n: "ODN 3", e: "ANDRETHO", co: [-17.393465, -67.130097], o: 0, l: 0 },
+            { n: "OLT ANDRETHO", e: "ANDRETHO", co: [-17.395231, -67.129331], o: 0, l: 0 }
+        ];
+
         function abrir(id, btn) {
-            const secciones = document.querySelectorAll('.seccion');
-            secciones.forEach(s => s.style.display = 'none');
-            const botones = document.querySelectorAll('.btn-menu');
-            botones.forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.seccion').forEach(s => s.style.display = 'none');
+            document.querySelectorAll('.btn-menu').forEach(b => b.classList.remove('active'));
             document.getElementById(id).style.display = 'block';
             btn.classList.add('active');
         }
 
+        function initMap() {
+            if (!map) {
+                map = L.map('mapa-contenedor').setView([-17.392, -67.127], 15);
+                L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}').addTo(map);
+            }
+            renderizarCajas();
+        }
+
+        function renderizarCajas() {
+            let h = "";
+            cajasKML.forEach((caja, i) => {
+                h += `<tr>
+                    <td>${caja.n}</td>
+                    <td><input type="text" class="editable-cell" value="${caja.e}" onchange="editNap(${i},'e',this.value)"></td>
+                    <td>${caja.co[0]}, ${caja.co[1]}</td>
+                    <td><input type="number" class="editable-cell" value="${caja.o}" onchange="editNap(${i},'o',this.value)"></td>
+                    <td><input type="number" class="editable-cell" value="${caja.l}" onchange="editNap(${i},'l',this.value)"></td>
+                </tr>`;
+                L.circleMarker(caja.co, { radius: 7, color: caja.e === 'RAMAL' ? 'blue' : 'purple', fillColor: '#fff', fillOpacity: 0.9 })
+                .addTo(map).bindPopup(`<b>${caja.n}</b><br>Empresa: ${caja.e}<br>Libres: ${caja.l}`);
+            });
+            document.getElementById('tb-naps').innerHTML = h;
+        }
+
+        function editNap(i, campo, val) { cajasKML[i][campo] = val; }
+
         function cargarTodo() {
-            // Facturas
+            // Facturación e Inventario se mantienen igual
             db.collection("facturas").orderBy("ff", "desc").onSnapshot(snap => {
                 let h = "";
                 snap.forEach(doc => {
                     let x = doc.data();
                     let cl = x.o === 'ANDRETHO' ? 'bg-andretho' : 'bg-ramal';
-                    h += `<tr><td>${x.n}</td><td>${x.c}</td><td>${x.m} Bs</td><td><span class="badge ${cl}">${x.o || 'RAMAL'}</span></td><td>${x.sec || '-'}</td><td>${x.f}</td><td>${x.h}</td><td><button class="bg-rojo btn-accion" onclick="eliminar('facturas','${doc.id}')">X</button></td></tr>`;
+                    h += `<tr><td>${x.n}</td><td>${x.c}</td><td>${x.m} Bs</td><td><span class="badge ${cl}">${x.o}</span></td><td>${x.sec || '-'}</td><td>${x.f}</td><td>${x.h}</td><td><button class="bg-rojo btn-accion" onclick="eliminar('facturas','${doc.id}')">X</button></td></tr>`;
                 });
                 document.getElementById('tb-f').innerHTML = h;
             });
 
-            // Inventario Editable
             db.collection("inventario").onSnapshot(snap => {
                 let h = "";
                 snap.forEach(doc => {
@@ -185,59 +242,70 @@
                 document.getElementById('tb-i').innerHTML = h;
             });
 
-            // Tickets con Zona Editable
-            db.collection("tickets").onSnapshot(snap => {
-                let hP = "", hE = "";
+            // Tickets con Separación de Historial
+            db.collection("tickets").orderBy("f", "desc").onSnapshot(snap => {
+                let hPend = "", hRamal = "", hAnd = "";
                 snap.forEach(doc => {
                     let x = doc.data();
+                    let clEmp = x.emp === 'ANDRETHO' ? 'bg-andretho' : 'bg-ramal';
+                    
                     let fila = `<tr>
+                        ${x.s === 'Programada' || x.s === 'Suspendida' ? `<td><span class="badge ${clEmp}">${x.emp||'RAMAL'}</span></td>` : ''}
                         <td>${x.c}</td>
-                        <td>${x.tel||''}</td>
-                        <td>${x.d||''}</td>
-                        <td><input type="text" class="editable-cell" value="${x.z || ''}" placeholder="Sin zona" onchange="actualizarDato('tickets','${doc.id}','z',this.value)"></td>
+                        ${x.s === 'Programada' || x.s === 'Suspendida' ? `<td>${x.tel||''}</td>` : ''}
+                        ${x.s === 'Programada' || x.s === 'Suspendida' ? `<td>${x.d||''}</td>` : ''}
+                        <td>${x.z||''}</td>
+                        ${x.s === 'Programada' || x.s === 'Suspendida' ? `<td>${x.coor||''}</td>` : ''}
                         <td>${x.t}</td>
                         <td>${x.tec||''}</td>
                         <td>${x.f}</td>
-                        <td class="${x.s==='Ejecutada'?'st-ejec':'st-prog'}">${x.s}</td>
+                        <td>${x.h||'-'}</td>
+                        <td class="st-${x.s}">${x.s}</td>
                         <td>
-                            <button class="bg-azul btn-accion" onclick="cambiarEstado('${doc.id}','${x.s}')"><i class="fas fa-sync"></i></button>
+                            <button class="bg-azul btn-accion" onclick="rotarEstado('${doc.id}','${x.s}')"><i class="fas fa-sync"></i></button>
                             <button class="bg-rojo btn-accion" onclick="eliminar('tickets','${doc.id}')">X</button>
                         </td>
                     </tr>`;
-                    if(x.s === 'Ejecutada') hE += fila; else hP += fila;
+
+                    if (x.s === 'Programada' || x.s === 'Suspendida' || x.s === 'Cancelada') {
+                        hPend += fila;
+                    } else if (x.s === 'Ejecutada') {
+                        if (x.emp === 'ANDRETHO') hAnd += fila;
+                        else hRamal += fila;
+                    }
                 });
-                document.getElementById('tb-t-prog').innerHTML = hP;
-                document.getElementById('tb-t-ejec').innerHTML = hE;
+                document.getElementById('tb-t-prog').innerHTML = hPend;
+                document.getElementById('tb-t-h-ramal').innerHTML = hRamal;
+                document.getElementById('tb-t-h-and').innerHTML = hAnd;
             });
         }
 
-        // Función Genérica para actualizar datos libremente
-        function actualizarDato(col, id, campo, valor) {
-            let v = (campo === 'c') ? parseInt(valor) : valor;
-            db.collection(col).doc(id).update({ [campo]: v });
+        function rotarEstado(id, actual) {
+            const estados = ["Programada", "Ejecutada", "Suspendida", "Cancelada"];
+            let nuevo = estados[(estados.indexOf(actual) + 1) % estados.length];
+            db.collection("tickets").doc(id).update({ s: nuevo });
         }
 
-        function addF() {
-            db.collection("facturas").add({
-                n:document.getElementById('fn').value, c:document.getElementById('fc').value,
-                m:document.getElementById('fm').value, o:document.getElementById('fo').value,
-                sec:document.getElementById('fs').value, f:document.getElementById('ff').value,
-                ff:document.getElementById('ff').value, h:document.getElementById('fh').value
-            });
-        }
-        function addI() { db.collection("inventario").add({ n:document.getElementById('in').value, c:document.getElementById('ic').value }); }
-        
         function addT() {
             db.collection("tickets").add({
-                c:document.getElementById('tc').value, tel:document.getElementById('ttel').value,
-                d:document.getElementById('tder').value, z:document.getElementById('tz').value,
-                t:document.getElementById('tt').value, tec:document.getElementById('ttec').value, 
-                f:document.getElementById('tf').value, h:document.getElementById('th').value, s:'Programada'
+                c: document.getElementById('tc').value,
+                tel: document.getElementById('ttel').value,
+                d: document.getElementById('tder').value,
+                z: document.getElementById('tz').value,
+                coor: document.getElementById('tcoor').value,
+                emp: document.getElementById('tempre').value,
+                t: document.getElementById('tt').value,
+                tec: document.getElementById('ttec').value,
+                f: document.getElementById('tf').value,
+                h: document.getElementById('th_ticket').value,
+                s: 'Programada'
             });
         }
 
-        function eliminar(col, id) { if(confirm('¿Eliminar registro?')) db.collection(col).doc(id).delete(); }
-        function cambiarEstado(id, s) { db.collection("tickets").doc(id).update({ s: s==='Programada'?'Ejecutada':'Programada' }); }
+        function actualizarDato(col, id, campo, valor) { db.collection(col).doc(id).update({ [campo]: parseInt(valor) }); }
+        function addF() { db.collection("facturas").add({ n:document.getElementById('fn').value, c:document.getElementById('fc').value, m:document.getElementById('fm').value, o:document.getElementById('fo').value, sec:document.getElementById('fs').value, f:document.getElementById('ff').value, ff:document.getElementById('ff').value, h:document.getElementById('fh').value }); }
+        function addI() { db.collection("inventario").add({ n:document.getElementById('in').value, c:document.getElementById('ic').value }); }
+        function eliminar(col, id) { if(confirm('¿Eliminar?')) db.collection(col).doc(id).delete(); }
 
         function reporteDiario() {
             const hoy = new Date().toISOString().split('T')[0];
@@ -247,13 +315,13 @@
                     let x=doc.data();
                     if(x.o==='ANDRETHO') a+=parseFloat(x.m)||0; else r+=parseFloat(x.m)||0;
                 });
-                alert(`REPORTES DE HOY\n\nRAMAL: ${r} Bs.\nANDRETHO: ${a} Bs.\nTOTAL: ${r+a} Bs.`);
+                alert(`RAMAL: ${r} Bs.\nANDRETHO: ${a} Bs.\nTOTAL: ${r+a} Bs.`);
             });
         }
 
         function exportarPDF(titulo, id) {
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('l', 'mm', 'a4'); // Paisaje para que quepa la zona
+            const doc = new jsPDF('l', 'mm', 'a4');
             doc.text("CERBERUS - " + titulo, 10, 10);
             doc.autoTable({ html: '#' + id, startY: 15 });
             doc.save(`Reporte_${titulo}.pdf`);
