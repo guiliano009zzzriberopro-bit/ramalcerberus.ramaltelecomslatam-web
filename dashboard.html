@@ -46,6 +46,7 @@
         .st-Cancelada { color: #718096; font-weight: bold; }
 
         h3 { margin-top: 25px; color: var(--azul); border-left: 4px solid var(--oro); padding-left: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .no-pdf { display: table-cell; }
     </style>
 </head>
 <body>
@@ -66,7 +67,7 @@
             <h1>Panel de Control</h1>
             <div class="card">
                 <h3>Estado del Sistema</h3>
-                <p style="color: #48BB78;"><i class="fas fa-cloud"></i> Sincronización en la nube activa</p>
+                <p style="color: #48BB78;"><i class="fas fa-cloud"></i> Sincronización en la nube activa (Firebase)</p>
             </div>
         </div>
 
@@ -76,7 +77,9 @@
             <div class="card">
                 <h3>Estado de Puertos, Nodo y Empresa (Cajas NAP)</h3>
                 <table id="tb-naps-container">
-                    <thead><tr><th>Nombre</th><th>Nodo (Editable)</th><th>Empresa</th><th>Coordenadas</th><th>Ocupados</th><th>Libres</th></tr></thead>
+                    <thead>
+                        <tr><th>Nombre</th><th>Nodo (Editable)</th><th>Empresa</th><th>Coordenadas</th><th>Ocupados</th><th>Libres</th></tr>
+                    </thead>
                     <tbody id="tb-naps"></tbody>
                 </table>
             </div>
@@ -175,7 +178,9 @@
         const db = firebase.firestore();
 
         let map;
-        const cajasKML = [
+        
+        // Datos del KML para carga inicial automática
+        const inicialKML = [
             { n: "NAP 1", nod: "NODO A", e: "ANDRETHO", co: [-17.395333, -67.130386], o: 10, l: 6 },
             { n: "NAP 2", nod: "NODO A", e: "ANDRETHO", co: [-17.393822, -67.130833], o: 5, l: 11 },
             { n: "NAP 3", nod: "NODO A", e: "ANDRETHO", co: [-17.393844, -67.128867], o: 11, l: 5 },
@@ -206,32 +211,47 @@
                 map = L.map('mapa-contenedor').setView([-17.392, -67.127], 15);
                 L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}').addTo(map);
             }
-            renderizarCajas();
+            cargarInfraestructura();
         }
 
-        function renderizarCajas() {
-            let h = "";
-            cajasKML.forEach((caja, i) => {
-                h += `<tr>
-                    <td>${caja.n}</td>
-                    <td><input type="text" class="editable-cell" value="${caja.nod}" onchange="editNap(${i},'nod',this.value)"></td>
-                    <td><input type="text" class="editable-cell" value="${caja.e}" onchange="editNap(${i},'e',this.value)"></td>
-                    <td>${caja.co[0]}, ${caja.co[1]}</td>
-                    <td><input type="number" class="editable-cell" value="${caja.o}" onchange="editNap(${i},'o',this.value)"></td>
-                    <td><input type="number" class="editable-cell" value="${caja.l}" onchange="editNap(${i},'l',this.value)"></td>
-                </tr>`;
-                L.circleMarker(caja.co, { radius: 7, color: caja.e === 'RAMAL' ? 'blue' : 'purple', fillColor: '#fff', fillOpacity: 0.9 })
-                .addTo(map).bindPopup(`<b>${caja.n}</b><br>Nodo: ${caja.nod}<br>Empresa: ${caja.e}<br>Libres: ${caja.l}`);
+        // CARGA Y SINCRONIZACIÓN DE CAJAS DESDE FIREBASE
+        function cargarInfraestructura() {
+            db.collection("infraestructura").orderBy("n").onSnapshot(snap => {
+                if (snap.empty) {
+                    inicialKML.forEach(c => db.collection("infraestructura").add(c));
+                    return;
+                }
+                let h = "";
+                // Limpiar marcadores viejos
+                map.eachLayer((layer) => { if (layer instanceof L.CircleMarker) map.removeLayer(layer); });
+
+                snap.forEach(doc => {
+                    let c = doc.data();
+                    let id = doc.id;
+                    h += `<tr>
+                        <td>${c.n}</td>
+                        <td><input type="text" class="editable-cell" value="${c.nod||''}" onchange="actualizarCaja('${id}','nod',this.value)"></td>
+                        <td><input type="text" class="editable-cell" value="${c.e}" onchange="actualizarCaja('${id}','e',this.value)"></td>
+                        <td>${c.co[0]}, ${c.co[1]}</td>
+                        <td><input type="number" class="editable-cell" value="${c.o}" onchange="actualizarCaja('${id}','o',this.value)"></td>
+                        <td><input type="number" class="editable-cell" value="${c.l}" onchange="actualizarCaja('${id}','l',this.value)"></td>
+                    </tr>`;
+                    
+                    L.circleMarker(c.co, { 
+                        radius: 7, color: c.e === 'RAMAL' ? 'blue' : 'purple', fillColor: '#fff', fillOpacity: 0.9 
+                    }).addTo(map).bindPopup(`<b>${c.n}</b><br>Nodo: ${c.nod||'---'}<br>Libres: ${c.l}`);
+                });
+                document.getElementById('tb-naps').innerHTML = h;
             });
-            document.getElementById('tb-naps').innerHTML = h;
         }
 
-        function editNap(i, campo, val) { 
-            cajasKML[i][campo] = val; 
-            if (map) renderizarCajas(); 
+        function actualizarCaja(id, campo, valor) {
+            let v = (campo==='o'||campo==='l') ? parseInt(valor) : valor;
+            db.collection("infraestructura").doc(id).update({ [campo]: v });
         }
 
         function cargarTodo() {
+            // Facturas
             db.collection("facturas").orderBy("ff", "desc").onSnapshot(snap => {
                 let h = "";
                 snap.forEach(doc => {
@@ -242,6 +262,7 @@
                 document.getElementById('tb-f').innerHTML = h;
             });
 
+            // Inventario
             db.collection("inventario").onSnapshot(snap => {
                 let h = "";
                 snap.forEach(doc => {
@@ -251,6 +272,7 @@
                 document.getElementById('tb-i').innerHTML = h;
             });
 
+            // Tickets
             db.collection("tickets").orderBy("f", "desc").onSnapshot(snap => {
                 let hPend = "", hRamal = "", hAnd = "";
                 snap.forEach(doc => {
@@ -289,7 +311,7 @@
         function actualizarDato(col, id, campo, valor) { db.collection(col).doc(id).update({ [campo]: (campo==='c'?parseInt(valor):valor) }); }
         function addF() { db.collection("facturas").add({ n:document.getElementById('fn').value, c:document.getElementById('fc').value, m:document.getElementById('fm').value, o:document.getElementById('fo').value, sec:document.getElementById('fs').value, f:document.getElementById('ff').value, ff:document.getElementById('ff').value, h:document.getElementById('fh').value }); }
         function addI() { db.collection("inventario").add({ n:document.getElementById('in').value, c:document.getElementById('ic').value }); }
-        function eliminar(col, id) { if(confirm('¿Eliminar?')) db.collection(col).doc(id).delete(); }
+        function eliminar(col, id) { if(confirm('¿Eliminar registro?')) db.collection(col).doc(id).delete(); }
 
         function reporteDiario() {
             const hoy = new Date().toISOString().split('T')[0];
@@ -299,22 +321,21 @@
                     let x=doc.data();
                     if(x.o==='ANDRETHO') a+=parseFloat(x.m)||0; else r+=parseFloat(x.m)||0;
                 });
-                alert(`RAMAL: ${r} Bs.\nANDRETHO: ${a} Bs.\nTOTAL: ${r+a} Bs.`);
+                alert(`REPORTES DE HOY\n\nRAMAL: ${r} Bs.\nANDRETHO: ${a} Bs.\nTOTAL: ${r+a} Bs.`);
             });
         }
 
         function exportarPDF(titulo, id) {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('l', 'mm', 'a4');
-            doc.setFontSize(16);
-            doc.text("CERBERUS - " + titulo.replace('_', ' '), 14, 15);
+            doc.text("CERBERUS - " + titulo, 14, 15);
             doc.autoTable({ 
                 html: '#' + id, 
                 startY: 20,
-                columnStyles: { 11: { display: 'none' }, 7: { display: 'none' } }, // Intento de ocultar botones en PDF
                 didParseCell: function(data) {
+                    // Ocultar columnas de botones en el PDF
                     if (data.column.index === 11 || (id !== 'tb-t-pend' && data.column.index === 7)) {
-                        data.cell.text = ''; // Limpia el texto de las celdas de acción/eliminar
+                        data.cell.text = '';
                     }
                 }
             });
