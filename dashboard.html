@@ -35,14 +35,16 @@
         .editable-cell:hover { border: 1px solid #ddd; background: #fff; }
 
         .btn-accion { padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: white; margin: 2px; }
-        .bg-verde { background: #48BB78; } .bg-rojo { background: #F56565; } .bg-azul { background: #4299E1; } .bg-gris { background: #718096; }
+        .bg-verde { background: #48BB78; } .bg-rojo { background: #F56565; } .bg-azul { background: #4299E1; } .bg-gris { background: #718096; } .bg-naranja { background: #ED8936; }
         
         .badge { padding: 3px 6px; border-radius: 4px; font-size: 9px; font-weight: bold; color: white; }
         .bg-ramal { background: #2b6cb0; } .bg-andretho { background: #805ad5; }
         
+        /* ESTADOS COLORES */
         .st-Programada, .st-Pendiente { color: #B7791F; font-weight: bold; }
         .st-Ejecutada, .st-Completada { color: #2F855A; font-weight: bold; }
         .st-Reprogramar { color: #E53E3E; font-weight: bold; }
+        .st-Cancelada { color: #718096; font-weight: bold; text-decoration: line-through; }
 
         h3 { margin-top: 25px; color: var(--azul); border-left: 4px solid var(--oro); padding-left: 10px; display: flex; justify-content: space-between; align-items: center; }
     </style>
@@ -57,6 +59,7 @@
         <button class="btn-menu" onclick="abrir('inventario', this)"><i class="fas fa-boxes"></i> Inventario</button>
         <button class="btn-menu" onclick="abrir('tickets', this)"><i class="fas fa-tools"></i> Tickets</button>
         <button class="btn-menu" onclick="abrir('bajas-seccion', this)"><i class="fas fa-user-slash"></i> Bajas de Servicio</button>
+        <button class="btn-menu" onclick="abrir('usuarios-seccion', this)"><i class="fas fa-users"></i> Gestión Usuarios</button>
         <br><br>
         <a href="index.html" style="color:white; text-decoration:none; padding:15px; display:block;"><i class="fas fa-power-off"></i> Salir</a>
     </div>
@@ -165,6 +168,40 @@
                 </table>
             </div>
         </div>
+
+        <div id="usuarios-seccion" class="seccion">
+            <div class="header-flex"><h1>Gestión de Usuarios</h1></div>
+            <div class="card">
+                <div class="input-group">
+                    <input type="text" id="un" placeholder="Nombre Completo">
+                    <input type="text" id="uci" placeholder="Carnet Identidad">
+                    <select id="ut" onchange="toggleFicha()">
+                        <option value="PARTICULAR">PARTICULAR</option>
+                        <option value="DESCUENTO">DESCUENTO</option>
+                    </select>
+                    <input type="text" id="uf" placeholder="Ficha (Solo Descuento)" disabled>
+                    <input type="text" id="uz" placeholder="Zona">
+                    <input type="text" id="ucel" placeholder="Celular Contacto">
+                    <select id="ured">
+                        <option value="RAMAL">RAMAL</option>
+                        <option value="ANDRETHO">ANDRETHO</option>
+                    </select>
+                    <button class="btn-accion bg-verde" onclick="addU()">Registrar</button>
+                </div>
+
+                <h3>USUARIOS PARTICULARES <button class="btn-accion bg-gris" onclick="exportarPDF('Usuarios_Particulares', 'tb-u-part')">PDF</button></h3>
+                <table id="tb-u-part">
+                    <thead><tr><th>Nombre</th><th>C.I.</th><th>Contrato</th><th>Zona</th><th>Celular</th><th>Red</th><th class="no-pdf">X</th></tr></thead>
+                    <tbody id="tb-u-part-body"></tbody>
+                </table>
+
+                <h3>USUARIOS A DESCUENTO <button class="btn-accion bg-gris" onclick="exportarPDF('Usuarios_Descuento', 'tb-u-desc')">PDF</button></h3>
+                <table id="tb-u-desc">
+                    <thead><tr><th>Nombre</th><th>C.I.</th><th>Contrato</th><th>Ficha</th><th>Zona</th><th>Celular</th><th>Red</th><th class="no-pdf">X</th></tr></thead>
+                    <tbody id="tb-u-desc-body"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -215,32 +252,33 @@
             });
         }
 
+        function toggleFicha() {
+            const tipo = document.getElementById('ut').value;
+            const ficha = document.getElementById('uf');
+            if(tipo === 'DESCUENTO') { ficha.disabled = false; } else { ficha.disabled = true; ficha.value = ''; }
+        }
+
         function cargarTodo() {
-            // Sincronización de Facturas
-            db.collection("facturas").orderBy("ff", "desc").onSnapshot(snap => {
-                let h = ""; snap.forEach(doc => {
-                    let x = doc.data(); let cl = x.o === 'ANDRETHO' ? 'bg-andretho' : 'bg-ramal';
-                    h += `<tr><td>${x.n}</td><td>${x.c}</td><td>${x.m} Bs</td><td><span class="badge ${cl}">${x.o}</span></td><td>${x.sec}</td><td>${x.f}</td><td>${x.h}</td><td><button class="bg-rojo btn-accion" onclick="eliminar('facturas','${doc.id}')">X</button></td></tr>`;
+            // Sincronización Usuarios
+            db.collection("usuarios").orderBy("un").onSnapshot(snap => {
+                let hPart = "", hDesc = "";
+                snap.forEach(doc => {
+                    let u = doc.data(); let redCl = u.ured === 'ANDRETHO' ? 'bg-andretho' : 'bg-ramal';
+                    let fC = `<td><input class="editable-cell" value="${u.un}" onchange="actDoc('usuarios','${doc.id}','un',this.value)"></td><td><input class="editable-cell" value="${u.uci}" onchange="actDoc('usuarios','${doc.id}','uci',this.value)"></td><td>${u.ut}</td>`;
+                    let fR = `<td><input class="editable-cell" value="${u.uz}" onchange="actDoc('usuarios','${doc.id}','uz',this.value)"></td><td><input class="editable-cell" value="${u.ucel}" onchange="actDoc('usuarios','${doc.id}','ucel',this.value)"></td><td><span class="badge ${redCl}">${u.ured || 'RAMAL'}</span></td><td class="no-pdf"><button class="bg-rojo btn-accion" onclick="eliminar('usuarios','${doc.id}')">X</button></td></tr>`;
+                    if(u.ut === 'PARTICULAR') { hPart += `<tr>${fC}${fR}`; } else { hDesc += `<tr>${fC}<td><input class="editable-cell" value="${u.uf||'-'}" onchange="actDoc('usuarios','${doc.id}','uf',this.value)"></td>${fR}`; }
                 });
-                document.getElementById('tb-f').innerHTML = h;
+                document.getElementById('tb-u-part-body').innerHTML = hPart; document.getElementById('tb-u-desc-body').innerHTML = hDesc;
             });
 
-            // Sincronización de Inventario
-            db.collection("inventario").onSnapshot(snap => {
-                let h = ""; snap.forEach(doc => {
-                    let x = doc.data();
-                    h += `<tr><td>${x.n}</td><td><input type="number" class="editable-cell" value="${x.c}" onchange="actDoc('inventario','${doc.id}','c',this.value)"></td><td><button class="bg-rojo btn-accion" onclick="eliminar('inventario','${doc.id}')">X</button></td></tr>`;
-                });
-                document.getElementById('tb-i').innerHTML = h;
-            });
-
-            // Sincronización de Tickets con 3 Estados
+            // Sincronización Tickets (CON ESTADOS)
             db.collection("tickets").orderBy("f", "desc").onSnapshot(snap => {
                 let hPend = "", hRamal = "", hAnd = "";
                 snap.forEach(doc => {
                     let x = doc.data();
                     let cl = x.emp === 'ANDRETHO' ? 'bg-andretho' : 'bg-ramal';
-                    if (x.s !== 'Ejecutada') {
+                    
+                    if (x.s !== 'Ejecutada' && x.s !== 'Cancelada') {
                         hPend += `<tr>
                             <td><span class="badge ${cl}">${x.emp}</span></td>
                             <td>${x.c}</td><td>${x.tel}</td><td>${x.d}</td><td>${x.z}</td><td>${x.coor}</td><td>${x.t}</td><td>${x.tec}</td><td>${x.f}</td><td>${x.h}</td>
@@ -249,10 +287,11 @@
                                 <button class="bg-azul btn-accion" onclick="cambiarEstadoTicket('${doc.id}','Ejecutada')" title="Ejecutada"><i class="fas fa-check"></i></button>
                                 <button class="bg-rojo btn-accion" onclick="cambiarEstadoTicket('${doc.id}','Reprogramar')" title="Reprogramar"><i class="fas fa-redo"></i></button>
                                 <button class="bg-gris btn-accion" onclick="cambiarEstadoTicket('${doc.id}','Programada')" title="Pendiente"><i class="fas fa-clock"></i></button>
+                                <button class="bg-naranja btn-accion" onclick="cambiarEstadoTicket('${doc.id}','Cancelada')" title="Cancelar"><i class="fas fa-times"></i></button>
                             </td>
                         </tr>`;
                     } else {
-                        let fila = `<tr><td>${x.c}</td><td>${x.z}</td><td>${x.t}</td><td>${x.tec}</td><td>${x.f}</td><td>${x.h}</td><td class="st-Ejecutada">Ejecutada</td><td><button class="bg-rojo btn-accion" onclick="eliminar('tickets','${doc.id}')">X</button></td></tr>`;
+                        let fila = `<tr><td>${x.c}</td><td>${x.z}</td><td>${x.t}</td><td>${x.tec}</td><td>${x.f}</td><td>${x.h}</td><td class="st-${x.s}">${x.s}</td><td><button class="bg-rojo btn-accion" onclick="eliminar('tickets','${doc.id}')">X</button></td></tr>`;
                         if(x.emp === 'ANDRETHO') hAnd += fila; else hRamal += fila;
                     }
                 });
@@ -261,81 +300,50 @@
                 document.getElementById('tb-t-h-and').innerHTML = hAnd;
             });
 
-            // Sincronización de Bajas con "Tipo de Servicio"
+            // Facturas
+            db.collection("facturas").orderBy("ff", "desc").onSnapshot(snap => {
+                let h = ""; snap.forEach(doc => {
+                    let x = doc.data(); let cl = x.o === 'ANDRETHO' ? 'bg-andretho' : 'bg-ramal';
+                    h += `<tr><td>${x.n}</td><td>${x.c}</td><td>${x.m} Bs</td><td><span class="badge ${cl}">${x.o}</span></td><td>${x.sec}</td><td>${x.f}</td><td>${x.h}</td><td><button class="bg-rojo btn-accion" onclick="eliminar('facturas','${doc.id}')">X</button></td></tr>`;
+                });
+                document.getElementById('tb-f').innerHTML = h;
+            });
+
+            // Inventario
+            db.collection("inventario").onSnapshot(snap => {
+                let h = ""; snap.forEach(doc => {
+                    let x = doc.data();
+                    h += `<tr><td>${x.n}</td><td><input type="number" class="editable-cell" value="${x.c}" onchange="actDoc('inventario','${doc.id}','c',this.value)"></td><td><button class="bg-rojo btn-accion" onclick="eliminar('inventario','${doc.id}')">X</button></td></tr>`;
+                });
+                document.getElementById('tb-i').innerHTML = h;
+            });
+
+            // Bajas
             db.collection("bajas").orderBy("f", "desc").onSnapshot(snap => {
                 let hP = "", hH = "";
                 snap.forEach(doc => {
-                    let b = doc.data();
-                    let cl = b.r === 'ANDRETHO' ? 'bg-andretho' : 'bg-ramal';
+                    let b = doc.data(); let cl = b.r === 'ANDRETHO' ? 'bg-andretho' : 'bg-ramal';
                     if (b.s === 'Pendiente') {
-                        hP += `<tr>
-                            <td><span class="badge ${cl}">${b.r}</span></td>
-                            <td>${b.n}</td><td>${b.z}</td><td>${b.t}</td>
-                            <td style="font-weight:bold; color:red;">${b.srv || 'FIBRA'}</td>
-                            <td>${b.tu}</td><td>${b.f} ${b.h}</td>
-                            <td class="st-Pendiente">Pendiente</td>
-                            <td class="no-pdf"><button class="bg-azul btn-accion" onclick="actDoc('bajas','${doc.id}','s','Completada')"><i class="fas fa-check"></i></button></td>
-                        </tr>`;
+                        hP += `<tr><td><span class="badge ${cl}">${b.r}</span></td><td>${b.n}</td><td>${b.z}</td><td>${b.t}</td><td style="color:red;font-weight:bold">${b.srv}</td><td>${b.tu}</td><td>${b.f}</td><td class="st-Pendiente">Pendiente</td><td class="no-pdf"><button class="bg-azul btn-accion" onclick="actDoc('bajas','${doc.id}','s','Completada')"><i class="fas fa-check"></i></button></td></tr>`;
                     } else {
-                        hH += `<tr>
-                            <td><span class="badge ${cl}">${b.r}</span></td>
-                            <td>${b.n}</td><td>${b.z}</td>
-                            <td>${b.srv || 'FIBRA'}</td>
-                            <td>${b.f}</td><td class="st-Completada">Completada</td>
-                            <td class="no-pdf"><button class="bg-rojo btn-accion" onclick="eliminar('bajas','${doc.id}')">X</button></td>
-                        </tr>`;
+                        hH += `<tr><td><span class="badge ${cl}">${b.r}</span></td><td>${b.n}</td><td>${b.z}</td><td>${b.srv}</td><td>${b.f}</td><td class="st-Completada">OK</td><td class="no-pdf"><button class="bg-rojo btn-accion" onclick="eliminar('bajas','${doc.id}')">X</button></td></tr>`;
                     }
                 });
-                document.getElementById('tb-bajas-list-pend').innerHTML = hP;
-                document.getElementById('tb-bajas-list-hist').innerHTML = hH;
+                document.getElementById('tb-bajas-list-pend').innerHTML = hP; document.getElementById('tb-bajas-list-hist').innerHTML = hH;
             });
         }
 
-        function addT() {
-            db.collection("tickets").add({
-                c: document.getElementById('tc').value, tel: document.getElementById('ttel').value,
-                d: document.getElementById('tder').value, z: document.getElementById('tz').value,
-                coor: document.getElementById('tcoor').value, emp: document.getElementById('tempre').value,
-                t: document.getElementById('tt').value, tec: document.getElementById('ttec').value,
-                f: document.getElementById('tf').value, h: document.getElementById('th_ticket').value, s: 'Programada'
-            });
-        }
-
-        function addBaja() {
-            db.collection("bajas").add({
-                n: document.getElementById('bn').value, z: document.getElementById('bz').value,
-                t: document.getElementById('bt').value, r: document.getElementById('br').value,
-                srv: document.getElementById('bsrv').value, // Nuevo campo: Internet o TV
-                tu: document.getElementById('btu').value, f: document.getElementById('bf').value,
-                h: document.getElementById('bh').value, s: 'Pendiente'
-            });
-        }
-
-        function cambiarEstadoTicket(id, nuevoEstado) { db.collection("tickets").doc(id).update({ s: nuevoEstado }); }
+        function addU() { db.collection("usuarios").add({ un: document.getElementById('un').value, uci: document.getElementById('uci').value, ut: document.getElementById('ut').value, uf: document.getElementById('uf').value || '-', uz: document.getElementById('uz').value, ucel: document.getElementById('ucel').value, ured: document.getElementById('ured').value }); document.getElementById('un').value = ''; document.getElementById('uci').value = ''; document.getElementById('uf').value = ''; document.getElementById('uz').value = ''; document.getElementById('ucel').value = ''; }
+        function addT() { db.collection("tickets").add({ c: document.getElementById('tc').value, tel: document.getElementById('ttel').value, d: document.getElementById('tder').value, z: document.getElementById('tz').value, coor: document.getElementById('tcoor').value, emp: document.getElementById('tempre').value, t: document.getElementById('tt').value, tec: document.getElementById('ttec').value, f: document.getElementById('tf').value, h: document.getElementById('th_ticket').value, s: 'Programada' }); }
+        function addBaja() { db.collection("bajas").add({ n: document.getElementById('bn').value, z: document.getElementById('bz').value, t: document.getElementById('bt').value, r: document.getElementById('br').value, srv: document.getElementById('bsrv').value, tu: document.getElementById('btu').value, f: document.getElementById('bf').value, h: document.getElementById('bh').value, s: 'Pendiente' }); }
+        function cambiarEstadoTicket(id, nE) { db.collection("tickets").doc(id).update({ s: nE }); }
         function actDoc(col, id, f, v) { db.collection(col).doc(id).update({ [f]: (f==='o'||f==='l'||f==='c'?parseInt(v):v) }); }
         function addF() { db.collection("facturas").add({ n:document.getElementById('fn').value, c:document.getElementById('fc').value, m:document.getElementById('fm').value, o:document.getElementById('fo').value, sec:document.getElementById('fs').value, f:document.getElementById('ff').value, ff:document.getElementById('ff').value, h:document.getElementById('fh').value }); }
         function addI() { db.collection("inventario").add({ n:document.getElementById('in').value, c:document.getElementById('ic').value }); }
         function eliminar(col, id) { if(confirm('¿Eliminar?')) db.collection(col).doc(id).delete(); }
 
-        function reporteDiario() {
-            const hoy = new Date().toISOString().split('T')[0];
-            db.collection("facturas").where("ff", "==", hoy).get().then(snap => {
-                let r=0, a=0;
-                snap.forEach(doc => {
-                    let x=doc.data();
-                    if(x.o==='ANDRETHO') a+=parseFloat(x.m)||0; else r+=parseFloat(x.m)||0;
-                });
-                alert(`REPORTE DE COBROS HOY\n\nRAMAL: ${r} Bs.\nANDRETHO: ${a} Bs.\nTOTAL: ${r+a} Bs.`);
-            });
-        }
-
-        function exportarPDF(titulo, id) {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('l', 'mm', 'a4');
-            doc.text("CERBERUS - " + titulo, 14, 15);
-            doc.autoTable({ html: '#' + id, startY: 20, didParseCell: function(d) { if(d.column.index === 7 || d.column.index === 11) d.cell.text = ''; } });
-            doc.save(`Reporte_${titulo}.pdf`);
-        }
+        function reporteDiario() { const hoy = new Date().toISOString().split('T')[0]; db.collection("facturas").where("ff", "==", hoy).get().then(snap => { let r=0, a=0; snap.forEach(doc => { let x=doc.data(); if(x.o==='ANDRETHO') a+=parseFloat(x.m)||0; else r+=parseFloat(x.m)||0; }); alert(`COBROS HOY\nRAMAL: ${r} Bs.\nANDRETHO: ${a} Bs.\nTOTAL: ${r+a} Bs.`); }); }
+        function exportarPDF(titulo, id) { const { jsPDF } = window.jspdf; const doc = new jsPDF('l', 'mm', 'a4'); doc.text("CERBERUS - " + titulo, 14, 15); doc.autoTable({ html: '#' + id, startY: 20 }); doc.save(`Reporte_${titulo}.pdf`); }
 
         window.onload = cargarTodo;
     </script>
