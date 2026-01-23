@@ -40,11 +40,13 @@
         .badge { padding: 3px 6px; border-radius: 4px; font-size: 9px; font-weight: bold; color: white; }
         .bg-ramal { background: #2b6cb0; } .bg-andretho { background: #805ad5; }
         
-        /* ESTADOS COLORES */
         .st-Programada, .st-Pendiente { color: #B7791F; font-weight: bold; }
         .st-Ejecutada, .st-Completada { color: #2F855A; font-weight: bold; }
         .st-Reprogramar { color: #E53E3E; font-weight: bold; }
         .st-Cancelada { color: #718096; font-weight: bold; text-decoration: line-through; }
+
+        .search-container { margin-bottom: 15px; position: relative; }
+        .search-container i { position: absolute; right: 15px; top: 12px; color: #718096; }
 
         h3 { margin-top: 25px; color: var(--azul); border-left: 4px solid var(--oro); padding-left: 10px; display: flex; justify-content: space-between; align-items: center; }
     </style>
@@ -126,16 +128,13 @@
                     <input type="text" id="ttec" placeholder="Técnico"><input type="date" id="tf"><input type="time" id="th_ticket">
                     <button class="btn-accion bg-verde" onclick="addT()">Programar</button>
                 </div>
-
                 <h3>PENDIENTES / EN CURSO <button class="btn-accion bg-gris" onclick="exportarPDF('Tickets_Pendientes', 'tb-t-pend')">PDF</button></h3>
                 <table id="tb-t-pend">
                     <thead><tr><th>Red</th><th>Cliente</th><th>Contacto</th><th>Derivado</th><th>Zona</th><th>Coord.</th><th>Tipo</th><th>Técnico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th class="no-pdf">Acción</th></tr></thead>
                     <tbody id="tb-t-prog"></tbody>
                 </table>
-
                 <h3>HISTORIAL RAMAL <button class="btn-accion bg-gris" onclick="exportarPDF('Historial_RAMAL', 'tb-h-ramal')">PDF</button></h3>
                 <table id="tb-h-ramal"><thead><tr><th>Cliente</th><th>Zona</th><th>Tipo</th><th>Técnico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th class="no-pdf">X</th></tr></thead><tbody id="tb-t-h-ramal"></tbody></table>
-
                 <h3>HISTORIAL ANDRETHO <button class="btn-accion bg-gris" onclick="exportarPDF('Historial_ANDRETHO', 'tb-h-and')">PDF</button></h3>
                 <table id="tb-h-and"><thead><tr><th>Cliente</th><th>Zona</th><th>Tipo</th><th>Técnico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th class="no-pdf">X</th></tr></thead><tbody id="tb-t-h-and"></tbody></table>
             </div>
@@ -154,13 +153,11 @@
                     <input type="date" id="bf"> <input type="time" id="bh">
                     <button class="btn-accion bg-rojo" onclick="addBaja()">Programar Baja</button>
                 </div>
-
                 <h3>BAJAS PENDIENTES <button class="btn-accion bg-gris" onclick="exportarPDF('Bajas_Pendientes', 'tb-b-pend')">PDF</button></h3>
                 <table id="tb-b-pend">
                     <thead><tr><th>Red</th><th>Cliente</th><th>Zona</th><th>Contacto</th><th>Servicio</th><th>Tipo Usuario</th><th>Fecha/Hora</th><th>Estado</th><th class="no-pdf">Acción</th></tr></thead>
                     <tbody id="tb-bajas-list-pend"></tbody>
                 </table>
-
                 <h3>HISTORIAL DE BAJAS <button class="btn-accion bg-gris" onclick="exportarPDF('Historial_Bajas', 'tb-b-hist')">PDF</button></h3>
                 <table id="tb-b-hist">
                     <thead><tr><th>Red</th><th>Cliente</th><th>Zona</th><th>Servicio</th><th>Fecha</th><th>Estado</th><th class="no-pdf">X</th></tr></thead>
@@ -172,6 +169,11 @@
         <div id="usuarios-seccion" class="seccion">
             <div class="header-flex"><h1>Gestión de Usuarios</h1></div>
             <div class="card">
+                <div class="search-container">
+                    <input type="text" id="searchUser" placeholder="Buscar usuario por nombre..." onkeyup="filterUsers()">
+                    <i class="fas fa-search"></i>
+                </div>
+
                 <div class="input-group">
                     <input type="text" id="un" placeholder="Nombre Completo">
                     <input type="text" id="uci" placeholder="Carnet Identidad">
@@ -239,6 +241,24 @@
             cargarInfraestructura();
         }
 
+        // FUNCION FILTRAR USUARIOS POR NOMBRE
+        function filterUsers() {
+            let input = document.getElementById('searchUser').value.toLowerCase();
+            let tables = ['tb-u-part-body', 'tb-u-desc-body'];
+            
+            tables.forEach(tableId => {
+                let tbody = document.getElementById(tableId);
+                let rows = tbody.getElementsByTagName('tr');
+                for (let i = 0; i < rows.length; i++) {
+                    let nameInput = rows[i].getElementsByTagName('input')[0];
+                    if (nameInput) {
+                        let textValue = nameInput.value.toLowerCase();
+                        rows[i].style.display = textValue.indexOf(input) > -1 ? "" : "none";
+                    }
+                }
+            });
+        }
+
         function cargarInfraestructura() {
             db.collection("infraestructura").orderBy("n").onSnapshot(snap => {
                 let h = "";
@@ -259,7 +279,6 @@
         }
 
         function cargarTodo() {
-            // Sincronización Usuarios
             db.collection("usuarios").orderBy("un").onSnapshot(snap => {
                 let hPart = "", hDesc = "";
                 snap.forEach(doc => {
@@ -269,38 +288,23 @@
                     if(u.ut === 'PARTICULAR') { hPart += `<tr>${fC}${fR}`; } else { hDesc += `<tr>${fC}<td><input class="editable-cell" value="${u.uf||'-'}" onchange="actDoc('usuarios','${doc.id}','uf',this.value)"></td>${fR}`; }
                 });
                 document.getElementById('tb-u-part-body').innerHTML = hPart; document.getElementById('tb-u-desc-body').innerHTML = hDesc;
+                filterUsers(); // Re-aplicar filtro si hay algo escrito
             });
 
-            // Sincronización Tickets (CON ESTADOS)
             db.collection("tickets").orderBy("f", "desc").onSnapshot(snap => {
                 let hPend = "", hRamal = "", hAnd = "";
                 snap.forEach(doc => {
-                    let x = doc.data();
-                    let cl = x.emp === 'ANDRETHO' ? 'bg-andretho' : 'bg-ramal';
-                    
+                    let x = doc.data(); let cl = x.emp === 'ANDRETHO' ? 'bg-andretho' : 'bg-ramal';
                     if (x.s !== 'Ejecutada' && x.s !== 'Cancelada') {
-                        hPend += `<tr>
-                            <td><span class="badge ${cl}">${x.emp}</span></td>
-                            <td>${x.c}</td><td>${x.tel}</td><td>${x.d}</td><td>${x.z}</td><td>${x.coor}</td><td>${x.t}</td><td>${x.tec}</td><td>${x.f}</td><td>${x.h}</td>
-                            <td class="st-${x.s}">${x.s}</td>
-                            <td class="no-pdf">
-                                <button class="bg-azul btn-accion" onclick="cambiarEstadoTicket('${doc.id}','Ejecutada')" title="Ejecutada"><i class="fas fa-check"></i></button>
-                                <button class="bg-rojo btn-accion" onclick="cambiarEstadoTicket('${doc.id}','Reprogramar')" title="Reprogramar"><i class="fas fa-redo"></i></button>
-                                <button class="bg-gris btn-accion" onclick="cambiarEstadoTicket('${doc.id}','Programada')" title="Pendiente"><i class="fas fa-clock"></i></button>
-                                <button class="bg-naranja btn-accion" onclick="cambiarEstadoTicket('${doc.id}','Cancelada')" title="Cancelar"><i class="fas fa-times"></i></button>
-                            </td>
-                        </tr>`;
+                        hPend += `<tr><td><span class="badge ${cl}">${x.emp}</span></td><td>${x.c}</td><td>${x.tel}</td><td>${x.d}</td><td>${x.z}</td><td>${x.coor}</td><td>${x.t}</td><td>${x.tec}</td><td>${x.f}</td><td>${x.h}</td><td class="st-${x.s}">${x.s}</td><td class="no-pdf"><button class="bg-azul btn-accion" onclick="cambiarEstadoTicket('${doc.id}','Ejecutada')"><i class="fas fa-check"></i></button><button class="bg-rojo btn-accion" onclick="cambiarEstadoTicket('${doc.id}','Reprogramar')"><i class="fas fa-redo"></i></button><button class="bg-gris btn-accion" onclick="cambiarEstadoTicket('${doc.id}','Programada')"><i class="fas fa-clock"></i></button><button class="bg-naranja btn-accion" onclick="cambiarEstadoTicket('${doc.id}','Cancelada')"><i class="fas fa-times"></i></button></td></tr>`;
                     } else {
                         let fila = `<tr><td>${x.c}</td><td>${x.z}</td><td>${x.t}</td><td>${x.tec}</td><td>${x.f}</td><td>${x.h}</td><td class="st-${x.s}">${x.s}</td><td><button class="bg-rojo btn-accion" onclick="eliminar('tickets','${doc.id}')">X</button></td></tr>`;
                         if(x.emp === 'ANDRETHO') hAnd += fila; else hRamal += fila;
                     }
                 });
-                document.getElementById('tb-t-prog').innerHTML = hPend;
-                document.getElementById('tb-t-h-ramal').innerHTML = hRamal;
-                document.getElementById('tb-t-h-and').innerHTML = hAnd;
+                document.getElementById('tb-t-prog').innerHTML = hPend; document.getElementById('tb-t-h-ramal').innerHTML = hRamal; document.getElementById('tb-t-h-and').innerHTML = hAnd;
             });
 
-            // Facturas
             db.collection("facturas").orderBy("ff", "desc").onSnapshot(snap => {
                 let h = ""; snap.forEach(doc => {
                     let x = doc.data(); let cl = x.o === 'ANDRETHO' ? 'bg-andretho' : 'bg-ramal';
@@ -309,7 +313,6 @@
                 document.getElementById('tb-f').innerHTML = h;
             });
 
-            // Inventario
             db.collection("inventario").onSnapshot(snap => {
                 let h = ""; snap.forEach(doc => {
                     let x = doc.data();
@@ -318,7 +321,6 @@
                 document.getElementById('tb-i').innerHTML = h;
             });
 
-            // Bajas
             db.collection("bajas").orderBy("f", "desc").onSnapshot(snap => {
                 let hP = "", hH = "";
                 snap.forEach(doc => {
