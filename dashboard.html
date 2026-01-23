@@ -28,7 +28,7 @@
         
         input, select { padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; font-size: 12px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
-        th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; font-size: 11px; }
+        th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; font-size: 10px; }
         th { background: #f8f8f8; color: var(--azul); }
         
         .editable-cell { border: 1px solid transparent; background: transparent; padding: 4px; border-radius: 4px; width: 100%; font-weight: bold; }
@@ -37,16 +37,15 @@
         .btn-accion { padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: white; margin: 2px; }
         .bg-verde { background: #48BB78; } .bg-rojo { background: #F56565; } .bg-azul { background: #4299E1; } .bg-gris { background: #718096; }
         
-        .badge { padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; color: white; }
+        .badge { padding: 3px 6px; border-radius: 4px; font-size: 9px; font-weight: bold; color: white; }
         .bg-ramal { background: #2b6cb0; } .bg-andretho { background: #805ad5; }
         
-        /* Estados */
         .st-Programada { color: #B7791F; font-weight: bold; }
         .st-Ejecutada { color: #2F855A; font-weight: bold; }
         .st-Suspendida { color: #C53030; font-weight: bold; }
         .st-Cancelada { color: #718096; font-weight: bold; }
 
-        h3 { margin-top: 20px; color: var(--azul); border-left: 4px solid var(--oro); padding-left: 10px; }
+        h3 { margin-top: 25px; color: var(--azul); border-left: 4px solid var(--oro); padding-left: 10px; display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
 <body>
@@ -75,9 +74,9 @@
             <h1>Infraestructura Satelital</h1>
             <div class="card"><div id="mapa-contenedor"></div></div>
             <div class="card">
-                <h3>Estado de Puertos y Empresa (Cajas NAP)</h3>
+                <h3>Estado de Puertos, Nodo y Empresa (Cajas NAP)</h3>
                 <table id="tb-naps-container">
-                    <thead><tr><th>Nombre</th><th>Empresa</th><th>Coordenadas</th><th>Ocupados</th><th>Libres</th></tr></thead>
+                    <thead><tr><th>Nombre</th><th>Nodo (Editable)</th><th>Empresa</th><th>Coordenadas</th><th>Ocupados</th><th>Libres</th></tr></thead>
                     <tbody id="tb-naps"></tbody>
                 </table>
             </div>
@@ -111,17 +110,13 @@
         </div>
 
         <div id="tickets" class="seccion">
-            <div class="header-flex">
-                <h1>Gestión de Tickets</h1>
-                <button class="btn-accion bg-gris" onclick="exportarPDF('Tickets', 'tb-t-full')">Exportar Todo PDF</button>
-            </div>
-            
+            <div class="header-flex"><h1>Gestión de Tickets</h1></div>
             <div class="card">
                 <div class="input-group">
-                    <input type="text" id="tc" placeholder="Cliente">
-                    <input type="text" id="ttel" placeholder="Contacto">
+                    <input type="text" id="tc" placeholder="Cliente"> 
+                    <input type="text" id="ttel" placeholder="Contacto"> 
                     <input type="text" id="tder" placeholder="Derivado">
-                    <input type="text" id="tz" placeholder="Zona/Barrio">
+                    <input type="text" id="tz" placeholder="Zona/Barrio"> 
                     <input type="text" id="tcoor" placeholder="Coordenadas">
                     <select id="tempre"><option value="RAMAL">RAMAL</option><option value="ANDRETHO">ANDRETHO</option></select>
                     <select id="tt"><option>Instalación Fibra</option><option>Instalación TV</option><option>Mantenimiento FTTH</option><option>Mantenimiento RG6</option></select>
@@ -129,21 +124,32 @@
                     <button class="btn-accion bg-verde" onclick="addT()">Programar</button>
                 </div>
 
-                <h3>PENDIENTES (RAMAL / ANDRETHO)</h3>
+                <h3>
+                    PENDIENTES / EN CURSO
+                    <button class="btn-accion bg-gris" onclick="exportarPDF('Tickets_Pendientes', 'tb-t-pend')"><i class="fas fa-file-pdf"></i> PDF</button>
+                </h3>
                 <table id="tb-t-pend">
-                    <thead><tr><th>Empresa</th><th>Cliente</th><th>Contacto</th><th>Zona</th><th>Coord.</th><th>Tipo</th><th>Técnico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Acción</th></tr></thead>
+                    <thead>
+                        <tr><th>Empresa</th><th>Cliente</th><th>Contacto</th><th>Derivado</th><th>Zona</th><th>Coord.</th><th>Tipo</th><th>Técnico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th class="no-pdf">Acción</th></tr>
+                    </thead>
                     <tbody id="tb-t-prog"></tbody>
                 </table>
 
-                <h3>HISTORIAL EJECUTADOS - RAMAL</h3>
+                <h3>
+                    HISTORIAL EJECUTADOS - RAMAL
+                    <button class="btn-accion bg-gris" onclick="exportarPDF('Historial_RAMAL', 'tb-h-ramal')"><i class="fas fa-file-pdf"></i> PDF</button>
+                </h3>
                 <table id="tb-h-ramal">
-                    <thead><tr><th>Cliente</th><th>Zona</th><th>Tipo</th><th>Técnico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>X</th></tr></thead>
+                    <thead><tr><th>Cliente</th><th>Zona</th><th>Tipo</th><th>Técnico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th class="no-pdf">X</th></tr></thead>
                     <tbody id="tb-t-h-ramal"></tbody>
                 </table>
 
-                <h3>HISTORIAL EJECUTADOS - ANDRETHO</h3>
+                <h3>
+                    HISTORIAL EJECUTADOS - ANDRETHO
+                    <button class="btn-accion bg-gris" onclick="exportarPDF('Historial_ANDRETHO', 'tb-h-and')"><i class="fas fa-file-pdf"></i> PDF</button>
+                </h3>
                 <table id="tb-h-and">
-                    <thead><tr><th>Cliente</th><th>Zona</th><th>Tipo</th><th>Técnico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>X</th></tr></thead>
+                    <thead><tr><th>Cliente</th><th>Zona</th><th>Tipo</th><th>Técnico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th class="no-pdf">X</th></tr></thead>
                     <tbody id="tb-t-h-and"></tbody>
                 </table>
             </div>
@@ -170,22 +176,22 @@
 
         let map;
         const cajasKML = [
-            { n: "NAP 1", e: "ANDRETHO", co: [-17.395333, -67.130386], o: 10, l: 6 },
-            { n: "NAP 2", e: "ANDRETHO", co: [-17.393822, -67.130833], o: 5, l: 11 },
-            { n: "NAP 3", e: "ANDRETHO", co: [-17.393844, -67.128867], o: 11, l: 5 },
-            { n: "NAP 4", e: "ANDRETHO", co: [-17.394142, -67.127419], o: 0, l: 16 },
-            { n: "NAP 5", e: "ANDRETHO", co: [-17.390883, -67.127392], o: 0, l: 16 },
-            { n: "NAP 6", e: "ANDRETHO", co: [-17.390236, -67.126131], o: 11, l: 5 },
-            { n: "NAP 7", e: "ANDRETHO", co: [-17.390978, -67.125139], o: 0, l: 16 },
-            { n: "NAP 8", e: "ANDRETHO", co: [-17.389606, -67.125742], o: 8, l: 8 },
-            { n: "NAP 9", e: "ANDRETHO", co: [-17.388839, -67.126861], o: 0, l: 16 },
-            { n: "NAP 10", e: "ANDRETHO", co: [-17.393117, -67.124564], o: 0, l: 16 },
-            { n: "NAP 11", e: "ANDRETHO", co: [-17.392846, -67.124257], o: 1, l: 15 },
-            { n: "NAP 12", e: "ANDRETHO", co: [-17.389033, -67.124375], o: 10, l: 6 },
-            { n: "ODN 1", e: "ANDRETHO", co: [-17.395156, -67.130181], o: 0, l: 0 },
-            { n: "ODN 2", e: "ANDRETHO", co: [-17.390639, -67.125603], o: 0, l: 0 },
-            { n: "ODN 3", e: "ANDRETHO", co: [-17.393465, -67.130097], o: 0, l: 0 },
-            { n: "OLT ANDRETHO", e: "ANDRETHO", co: [-17.395231, -67.129331], o: 0, l: 0 }
+            { n: "NAP 1", nod: "NODO A", e: "ANDRETHO", co: [-17.395333, -67.130386], o: 10, l: 6 },
+            { n: "NAP 2", nod: "NODO A", e: "ANDRETHO", co: [-17.393822, -67.130833], o: 5, l: 11 },
+            { n: "NAP 3", nod: "NODO A", e: "ANDRETHO", co: [-17.393844, -67.128867], o: 11, l: 5 },
+            { n: "NAP 4", nod: "NODO B", e: "ANDRETHO", co: [-17.394142, -67.127419], o: 0, l: 16 },
+            { n: "NAP 5", nod: "NODO B", e: "ANDRETHO", co: [-17.390883, -67.127392], o: 0, l: 16 },
+            { n: "NAP 6", nod: "NODO B", e: "ANDRETHO", co: [-17.390236, -67.126131], o: 11, l: 5 },
+            { n: "NAP 7", nod: "NODO C", e: "ANDRETHO", co: [-17.390978, -67.125139], o: 0, l: 16 },
+            { n: "NAP 8", nod: "NODO C", e: "ANDRETHO", co: [-17.389606, -67.125742], o: 8, l: 8 },
+            { n: "NAP 9", nod: "NODO C", e: "ANDRETHO", co: [-17.388839, -67.126861], o: 0, l: 16 },
+            { n: "NAP 10", nod: "NODO D", e: "ANDRETHO", co: [-17.393117, -67.124564], o: 0, l: 16 },
+            { n: "NAP 11", nod: "NODO D", e: "ANDRETHO", co: [-17.392846, -67.124257], o: 1, l: 15 },
+            { n: "NAP 12", nod: "NODO D", e: "ANDRETHO", co: [-17.389033, -67.124375], o: 10, l: 6 },
+            { n: "ODN 1", nod: "TRONCAL", e: "ANDRETHO", co: [-17.395156, -67.130181], o: 0, l: 0 },
+            { n: "ODN 2", nod: "TRONCAL", e: "ANDRETHO", co: [-17.390639, -67.125603], o: 0, l: 0 },
+            { n: "ODN 3", nod: "TRONCAL", e: "ANDRETHO", co: [-17.393465, -67.130097], o: 0, l: 0 },
+            { n: "OLT ANDRETHO", nod: "CENTRAL", e: "ANDRETHO", co: [-17.395231, -67.129331], o: 0, l: 0 }
         ];
 
         function abrir(id, btn) {
@@ -208,27 +214,30 @@
             cajasKML.forEach((caja, i) => {
                 h += `<tr>
                     <td>${caja.n}</td>
+                    <td><input type="text" class="editable-cell" value="${caja.nod}" onchange="editNap(${i},'nod',this.value)"></td>
                     <td><input type="text" class="editable-cell" value="${caja.e}" onchange="editNap(${i},'e',this.value)"></td>
                     <td>${caja.co[0]}, ${caja.co[1]}</td>
                     <td><input type="number" class="editable-cell" value="${caja.o}" onchange="editNap(${i},'o',this.value)"></td>
                     <td><input type="number" class="editable-cell" value="${caja.l}" onchange="editNap(${i},'l',this.value)"></td>
                 </tr>`;
                 L.circleMarker(caja.co, { radius: 7, color: caja.e === 'RAMAL' ? 'blue' : 'purple', fillColor: '#fff', fillOpacity: 0.9 })
-                .addTo(map).bindPopup(`<b>${caja.n}</b><br>Empresa: ${caja.e}<br>Libres: ${caja.l}`);
+                .addTo(map).bindPopup(`<b>${caja.n}</b><br>Nodo: ${caja.nod}<br>Empresa: ${caja.e}<br>Libres: ${caja.l}`);
             });
             document.getElementById('tb-naps').innerHTML = h;
         }
 
-        function editNap(i, campo, val) { cajasKML[i][campo] = val; }
+        function editNap(i, campo, val) { 
+            cajasKML[i][campo] = val; 
+            if (map) renderizarCajas(); 
+        }
 
         function cargarTodo() {
-            // Facturación e Inventario se mantienen igual
             db.collection("facturas").orderBy("ff", "desc").onSnapshot(snap => {
                 let h = "";
                 snap.forEach(doc => {
                     let x = doc.data();
                     let cl = x.o === 'ANDRETHO' ? 'bg-andretho' : 'bg-ramal';
-                    h += `<tr><td>${x.n}</td><td>${x.c}</td><td>${x.m} Bs</td><td><span class="badge ${cl}">${x.o}</span></td><td>${x.sec || '-'}</td><td>${x.f}</td><td>${x.h}</td><td><button class="bg-rojo btn-accion" onclick="eliminar('facturas','${doc.id}')">X</button></td></tr>`;
+                    h += `<tr><td>${x.n}</td><td>${x.c}</td><td>${x.m} Bs</td><td><span class="badge ${cl}">${x.o || 'RAMAL'}</span></td><td>${x.sec || '-'}</td><td>${x.f}</td><td>${x.h}</td><td><button class="bg-rojo btn-accion" onclick="eliminar('facturas','${doc.id}')">X</button></td></tr>`;
                 });
                 document.getElementById('tb-f').innerHTML = h;
             });
@@ -242,36 +251,16 @@
                 document.getElementById('tb-i').innerHTML = h;
             });
 
-            // Tickets con Separación de Historial
             db.collection("tickets").orderBy("f", "desc").onSnapshot(snap => {
                 let hPend = "", hRamal = "", hAnd = "";
                 snap.forEach(doc => {
                     let x = doc.data();
                     let clEmp = x.emp === 'ANDRETHO' ? 'bg-andretho' : 'bg-ramal';
-                    
-                    let fila = `<tr>
-                        ${x.s === 'Programada' || x.s === 'Suspendida' ? `<td><span class="badge ${clEmp}">${x.emp||'RAMAL'}</span></td>` : ''}
-                        <td>${x.c}</td>
-                        ${x.s === 'Programada' || x.s === 'Suspendida' ? `<td>${x.tel||''}</td>` : ''}
-                        ${x.s === 'Programada' || x.s === 'Suspendida' ? `<td>${x.d||''}</td>` : ''}
-                        <td>${x.z||''}</td>
-                        ${x.s === 'Programada' || x.s === 'Suspendida' ? `<td>${x.coor||''}</td>` : ''}
-                        <td>${x.t}</td>
-                        <td>${x.tec||''}</td>
-                        <td>${x.f}</td>
-                        <td>${x.h||'-'}</td>
-                        <td class="st-${x.s}">${x.s}</td>
-                        <td>
-                            <button class="bg-azul btn-accion" onclick="rotarEstado('${doc.id}','${x.s}')"><i class="fas fa-sync"></i></button>
-                            <button class="bg-rojo btn-accion" onclick="eliminar('tickets','${doc.id}')">X</button>
-                        </td>
-                    </tr>`;
-
-                    if (x.s === 'Programada' || x.s === 'Suspendida' || x.s === 'Cancelada') {
-                        hPend += fila;
-                    } else if (x.s === 'Ejecutada') {
-                        if (x.emp === 'ANDRETHO') hAnd += fila;
-                        else hRamal += fila;
+                    if (x.s !== 'Ejecutada') {
+                        hPend += `<tr><td><span class="badge ${clEmp}">${x.emp||'RAMAL'}</span></td><td>${x.c}</td><td>${x.tel||''}</td><td>${x.d||''}</td><td>${x.z||''}</td><td>${x.coor||''}</td><td>${x.t}</td><td>${x.tec||''}</td><td>${x.f}</td><td>${x.h||'-'}</td><td class="st-${x.s}">${x.s}</td><td><button class="bg-azul btn-accion" onclick="rotarEstado('${doc.id}','${x.s}')"><i class="fas fa-sync"></i></button><button class="bg-rojo btn-accion" onclick="eliminar('tickets','${doc.id}')">X</button></td></tr>`;
+                    } else {
+                        let filaH = `<tr><td>${x.c}</td><td>${x.z||''}</td><td>${x.t}</td><td>${x.tec||''}</td><td>${x.f}</td><td>${x.h||'-'}</td><td class="st-Ejecutada">Ejecutada</td><td><button class="bg-rojo btn-accion" onclick="eliminar('tickets','${doc.id}')">X</button></td></tr>`;
+                        if (x.emp === 'ANDRETHO') hAnd += filaH; else hRamal += filaH;
                     }
                 });
                 document.getElementById('tb-t-prog').innerHTML = hPend;
@@ -288,21 +277,16 @@
 
         function addT() {
             db.collection("tickets").add({
-                c: document.getElementById('tc').value,
-                tel: document.getElementById('ttel').value,
-                d: document.getElementById('tder').value,
-                z: document.getElementById('tz').value,
-                coor: document.getElementById('tcoor').value,
-                emp: document.getElementById('tempre').value,
-                t: document.getElementById('tt').value,
-                tec: document.getElementById('ttec').value,
-                f: document.getElementById('tf').value,
-                h: document.getElementById('th_ticket').value,
+                c: document.getElementById('tc').value, tel: document.getElementById('ttel').value,
+                d: document.getElementById('tder').value, z: document.getElementById('tz').value,
+                coor: document.getElementById('tcoor').value, emp: document.getElementById('tempre').value,
+                t: document.getElementById('tt').value, tec: document.getElementById('ttec').value,
+                f: document.getElementById('tf').value, h: document.getElementById('th_ticket').value,
                 s: 'Programada'
             });
         }
 
-        function actualizarDato(col, id, campo, valor) { db.collection(col).doc(id).update({ [campo]: parseInt(valor) }); }
+        function actualizarDato(col, id, campo, valor) { db.collection(col).doc(id).update({ [campo]: (campo==='c'?parseInt(valor):valor) }); }
         function addF() { db.collection("facturas").add({ n:document.getElementById('fn').value, c:document.getElementById('fc').value, m:document.getElementById('fm').value, o:document.getElementById('fo').value, sec:document.getElementById('fs').value, f:document.getElementById('ff').value, ff:document.getElementById('ff').value, h:document.getElementById('fh').value }); }
         function addI() { db.collection("inventario").add({ n:document.getElementById('in').value, c:document.getElementById('ic').value }); }
         function eliminar(col, id) { if(confirm('¿Eliminar?')) db.collection(col).doc(id).delete(); }
@@ -322,8 +306,18 @@
         function exportarPDF(titulo, id) {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('l', 'mm', 'a4');
-            doc.text("CERBERUS - " + titulo, 10, 10);
-            doc.autoTable({ html: '#' + id, startY: 15 });
+            doc.setFontSize(16);
+            doc.text("CERBERUS - " + titulo.replace('_', ' '), 14, 15);
+            doc.autoTable({ 
+                html: '#' + id, 
+                startY: 20,
+                columnStyles: { 11: { display: 'none' }, 7: { display: 'none' } }, // Intento de ocultar botones en PDF
+                didParseCell: function(data) {
+                    if (data.column.index === 11 || (id !== 'tb-t-pend' && data.column.index === 7)) {
+                        data.cell.text = ''; // Limpia el texto de las celdas de acción/eliminar
+                    }
+                }
+            });
             doc.save(`Reporte_${titulo}.pdf`);
         }
 
