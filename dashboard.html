@@ -40,13 +40,12 @@
         .badge { padding: 3px 6px; border-radius: 4px; font-size: 9px; font-weight: bold; color: white; }
         .bg-ramal { background: #2b6cb0; } .bg-andretho { background: #805ad5; }
         
-        .st-Programada { color: #B7791F; font-weight: bold; }
-        .st-Ejecutada { color: #2F855A; font-weight: bold; }
-        .st-Suspendida { color: #C53030; font-weight: bold; }
-        .st-Cancelada { color: #718096; font-weight: bold; }
+        /* Colores de Estados */
+        .st-Programada, .st-Pendiente { color: #B7791F; font-weight: bold; }
+        .st-Ejecutada, .st-Completada { color: #2F855A; font-weight: bold; }
+        .st-Reprogramar { color: #E53E3E; font-weight: bold; }
 
         h3 { margin-top: 25px; color: var(--azul); border-left: 4px solid var(--oro); padding-left: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .no-pdf { display: table-cell; }
     </style>
 </head>
 <body>
@@ -58,6 +57,7 @@
         <button class="btn-menu" onclick="abrir('facturacion', this)"><i class="fas fa-file-invoice"></i> Facturación</button>
         <button class="btn-menu" onclick="abrir('inventario', this)"><i class="fas fa-boxes"></i> Inventario</button>
         <button class="btn-menu" onclick="abrir('tickets', this)"><i class="fas fa-tools"></i> Tickets</button>
+        <button class="btn-menu" onclick="abrir('bajas-seccion', this)"><i class="fas fa-user-slash"></i> Bajas de Servicio</button>
         <br><br>
         <a href="index.html" style="color:white; text-decoration:none; padding:15px; display:block;"><i class="fas fa-power-off"></i> Salir</a>
     </div>
@@ -67,7 +67,7 @@
             <h1>Panel de Control</h1>
             <div class="card">
                 <h3>Estado del Sistema</h3>
-                <p style="color: #48BB78;"><i class="fas fa-cloud"></i> Sincronización en la nube activa (Firebase)</p>
+                <p style="color: #48BB78;"><i class="fas fa-cloud"></i> Sistema Sincronizado</p>
             </div>
         </div>
 
@@ -75,11 +75,9 @@
             <h1>Infraestructura Satelital</h1>
             <div class="card"><div id="mapa-contenedor"></div></div>
             <div class="card">
-                <h3>Estado de Puertos, Nodo y Empresa (Cajas NAP)</h3>
+                <h3>Estado de Puertos y Nodos</h3>
                 <table id="tb-naps-container">
-                    <thead>
-                        <tr><th>Nombre</th><th>Nodo (Editable)</th><th>Empresa</th><th>Coordenadas</th><th>Ocupados</th><th>Libres</th></tr>
-                    </thead>
+                    <thead><tr><th>Nombre</th><th>Nodo</th><th>Empresa</th><th>Coordenadas</th><th>Ocupados</th><th>Libres</th></tr></thead>
                     <tbody id="tb-naps"></tbody>
                 </table>
             </div>
@@ -87,8 +85,11 @@
 
         <div id="facturacion" class="seccion">
             <div class="header-flex">
-                <h1>Facturación</h1>
-                <div><button class="btn-accion bg-azul" onclick="reporteDiario()">Reporte Diario</button> <button class="btn-accion bg-gris" onclick="exportarPDF('Facturacion', 'tb-f-container')">PDF</button></div>
+                <h1>Facturación</h1> 
+                <div>
+                    <button class="btn-accion bg-azul" onclick="reporteDiario()">Informe Diario</button>
+                    <button class="btn-accion bg-gris" onclick="exportarPDF('Facturacion', 'tb-f-container')">PDF</button>
+                </div>
             </div>
             <div class="card">
                 <div class="input-group">
@@ -116,44 +117,51 @@
             <div class="header-flex"><h1>Gestión de Tickets</h1></div>
             <div class="card">
                 <div class="input-group">
-                    <input type="text" id="tc" placeholder="Cliente"> 
-                    <input type="text" id="ttel" placeholder="Contacto"> 
-                    <input type="text" id="tder" placeholder="Derivado">
-                    <input type="text" id="tz" placeholder="Zona/Barrio"> 
-                    <input type="text" id="tcoor" placeholder="Coordenadas">
+                    <input type="text" id="tc" placeholder="Cliente"> <input type="text" id="ttel" placeholder="Contacto"> <input type="text" id="tder" placeholder="Derivado">
+                    <input type="text" id="tz" placeholder="Zona/Barrio"> <input type="text" id="tcoor" placeholder="Coord.">
                     <select id="tempre"><option value="RAMAL">RAMAL</option><option value="ANDRETHO">ANDRETHO</option></select>
                     <select id="tt"><option>Instalación Fibra</option><option>Instalación TV</option><option>Mantenimiento FTTH</option><option>Mantenimiento RG6</option></select>
                     <input type="text" id="ttec" placeholder="Técnico"><input type="date" id="tf"><input type="time" id="th_ticket">
                     <button class="btn-accion bg-verde" onclick="addT()">Programar</button>
                 </div>
 
-                <h3>
-                    PENDIENTES / EN CURSO
-                    <button class="btn-accion bg-gris" onclick="exportarPDF('Tickets_Pendientes', 'tb-t-pend')"><i class="fas fa-file-pdf"></i> PDF</button>
-                </h3>
+                <h3>PENDIENTES / EN CURSO <button class="btn-accion bg-gris" onclick="exportarPDF('Tickets_Pendientes', 'tb-t-pend')">PDF</button></h3>
                 <table id="tb-t-pend">
-                    <thead>
-                        <tr><th>Empresa</th><th>Cliente</th><th>Contacto</th><th>Derivado</th><th>Zona</th><th>Coord.</th><th>Tipo</th><th>Técnico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th class="no-pdf">Acción</th></tr>
-                    </thead>
+                    <thead><tr><th>Red</th><th>Cliente</th><th>Contacto</th><th>Derivado</th><th>Zona</th><th>Coord.</th><th>Tipo</th><th>Técnico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th class="no-pdf">Acción</th></tr></thead>
                     <tbody id="tb-t-prog"></tbody>
                 </table>
 
-                <h3>
-                    HISTORIAL EJECUTADOS - RAMAL
-                    <button class="btn-accion bg-gris" onclick="exportarPDF('Historial_RAMAL', 'tb-h-ramal')"><i class="fas fa-file-pdf"></i> PDF</button>
-                </h3>
-                <table id="tb-h-ramal">
-                    <thead><tr><th>Cliente</th><th>Zona</th><th>Tipo</th><th>Técnico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th class="no-pdf">X</th></tr></thead>
-                    <tbody id="tb-t-h-ramal"></tbody>
+                <h3>HISTORIAL RAMAL <button class="btn-accion bg-gris" onclick="exportarPDF('Historial_RAMAL', 'tb-h-ramal')">PDF</button></h3>
+                <table id="tb-h-ramal"><thead><tr><th>Cliente</th><th>Zona</th><th>Tipo</th><th>Técnico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th class="no-pdf">X</th></tr></thead><tbody id="tb-t-h-ramal"></tbody></table>
+
+                <h3>HISTORIAL ANDRETHO <button class="btn-accion bg-gris" onclick="exportarPDF('Historial_ANDRETHO', 'tb-h-and')">PDF</button></h3>
+                <table id="tb-h-and"><thead><tr><th>Cliente</th><th>Zona</th><th>Tipo</th><th>Técnico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th class="no-pdf">X</th></tr></thead><tbody id="tb-t-h-and"></tbody></table>
+            </div>
+        </div>
+
+        <div id="bajas-seccion" class="seccion">
+            <div class="header-flex"><h1>Bajas de Servicio</h1></div>
+            <div class="card">
+                <div class="input-group">
+                    <input type="text" id="bn" placeholder="Nombre Cliente">
+                    <input type="text" id="bz" placeholder="Zona">
+                    <input type="text" id="bt" placeholder="N° Contacto">
+                    <select id="br"><option value="RAMAL">RED RAMAL</option><option value="ANDRETHO">RED ANDRETHO</option></select>
+                    <select id="btu"><option value="HOGAR">HOGAR</option><option value="PRO">PRO</option><option value="EMPRESARIAL">EMPRESARIAL</option></select>
+                    <input type="date" id="bf"> <input type="time" id="bh">
+                    <button class="btn-accion bg-rojo" onclick="addBaja()">Programar Baja</button>
+                </div>
+
+                <h3>BAJAS PENDIENTES <button class="btn-accion bg-gris" onclick="exportarPDF('Bajas_Pendientes', 'tb-b-pend')">PDF</button></h3>
+                <table id="tb-b-pend">
+                    <thead><tr><th>Red</th><th>Cliente</th><th>Zona</th><th>Contacto</th><th>Fecha/Hora</th><th>Tipo</th><th>Estado</th><th class="no-pdf">Acción</th></tr></thead>
+                    <tbody id="tb-bajas-list-pend"></tbody>
                 </table>
 
-                <h3>
-                    HISTORIAL EJECUTADOS - ANDRETHO
-                    <button class="btn-accion bg-gris" onclick="exportarPDF('Historial_ANDRETHO', 'tb-h-and')"><i class="fas fa-file-pdf"></i> PDF</button>
-                </h3>
-                <table id="tb-h-and">
-                    <thead><tr><th>Cliente</th><th>Zona</th><th>Tipo</th><th>Técnico</th><th>Fecha</th><th>Hora</th><th>Estado</th><th class="no-pdf">X</th></tr></thead>
-                    <tbody id="tb-t-h-and"></tbody>
+                <h3>HISTORIAL DE BAJAS <button class="btn-accion bg-gris" onclick="exportarPDF('Historial_Bajas', 'tb-b-hist')">PDF</button></h3>
+                <table id="tb-b-hist">
+                    <thead><tr><th>Red</th><th>Cliente</th><th>Zona</th><th>Fecha</th><th>Tipo</th><th>Estado</th><th class="no-pdf">X</th></tr></thead>
+                    <tbody id="tb-bajas-list-hist"></tbody>
                 </table>
             </div>
         </div>
@@ -178,26 +186,6 @@
         const db = firebase.firestore();
 
         let map;
-        
-        // Datos del KML para carga inicial automática
-        const inicialKML = [
-            { n: "NAP 1", nod: "NODO A", e: "ANDRETHO", co: [-17.395333, -67.130386], o: 10, l: 6 },
-            { n: "NAP 2", nod: "NODO A", e: "ANDRETHO", co: [-17.393822, -67.130833], o: 5, l: 11 },
-            { n: "NAP 3", nod: "NODO A", e: "ANDRETHO", co: [-17.393844, -67.128867], o: 11, l: 5 },
-            { n: "NAP 4", nod: "NODO B", e: "ANDRETHO", co: [-17.394142, -67.127419], o: 0, l: 16 },
-            { n: "NAP 5", nod: "NODO B", e: "ANDRETHO", co: [-17.390883, -67.127392], o: 0, l: 16 },
-            { n: "NAP 6", nod: "NODO B", e: "ANDRETHO", co: [-17.390236, -67.126131], o: 11, l: 5 },
-            { n: "NAP 7", nod: "NODO C", e: "ANDRETHO", co: [-17.390978, -67.125139], o: 0, l: 16 },
-            { n: "NAP 8", nod: "NODO C", e: "ANDRETHO", co: [-17.389606, -67.125742], o: 8, l: 8 },
-            { n: "NAP 9", nod: "NODO C", e: "ANDRETHO", co: [-17.388839, -67.126861], o: 0, l: 16 },
-            { n: "NAP 10", nod: "NODO D", e: "ANDRETHO", co: [-17.393117, -67.124564], o: 0, l: 16 },
-            { n: "NAP 11", nod: "NODO D", e: "ANDRETHO", co: [-17.392846, -67.124257], o: 1, l: 15 },
-            { n: "NAP 12", nod: "NODO D", e: "ANDRETHO", co: [-17.389033, -67.124375], o: 10, l: 6 },
-            { n: "ODN 1", nod: "TRONCAL", e: "ANDRETHO", co: [-17.395156, -67.130181], o: 0, l: 0 },
-            { n: "ODN 2", nod: "TRONCAL", e: "ANDRETHO", co: [-17.390639, -67.125603], o: 0, l: 0 },
-            { n: "ODN 3", nod: "TRONCAL", e: "ANDRETHO", co: [-17.393465, -67.130097], o: 0, l: 0 },
-            { n: "OLT ANDRETHO", nod: "CENTRAL", e: "ANDRETHO", co: [-17.395231, -67.129331], o: 0, l: 0 }
-        ];
 
         function abrir(id, btn) {
             document.querySelectorAll('.seccion').forEach(s => s.style.display = 'none');
@@ -214,87 +202,77 @@
             cargarInfraestructura();
         }
 
-        // CARGA Y SINCRONIZACIÓN DE CAJAS DESDE FIREBASE
         function cargarInfraestructura() {
             db.collection("infraestructura").orderBy("n").onSnapshot(snap => {
-                if (snap.empty) {
-                    inicialKML.forEach(c => db.collection("infraestructura").add(c));
-                    return;
-                }
                 let h = "";
-                // Limpiar marcadores viejos
-                map.eachLayer((layer) => { if (layer instanceof L.CircleMarker) map.removeLayer(layer); });
-
+                map.eachLayer((l) => { if (l instanceof L.CircleMarker) map.removeLayer(l); });
                 snap.forEach(doc => {
                     let c = doc.data();
-                    let id = doc.id;
-                    h += `<tr>
-                        <td>${c.n}</td>
-                        <td><input type="text" class="editable-cell" value="${c.nod||''}" onchange="actualizarCaja('${id}','nod',this.value)"></td>
-                        <td><input type="text" class="editable-cell" value="${c.e}" onchange="actualizarCaja('${id}','e',this.value)"></td>
-                        <td>${c.co[0]}, ${c.co[1]}</td>
-                        <td><input type="number" class="editable-cell" value="${c.o}" onchange="actualizarCaja('${id}','o',this.value)"></td>
-                        <td><input type="number" class="editable-cell" value="${c.l}" onchange="actualizarCaja('${id}','l',this.value)"></td>
-                    </tr>`;
-                    
-                    L.circleMarker(c.co, { 
-                        radius: 7, color: c.e === 'RAMAL' ? 'blue' : 'purple', fillColor: '#fff', fillOpacity: 0.9 
-                    }).addTo(map).bindPopup(`<b>${c.n}</b><br>Nodo: ${c.nod||'---'}<br>Libres: ${c.l}`);
+                    h += `<tr><td>${c.n}</td><td><input class="editable-cell" value="${c.nod||''}" onchange="actDoc('infraestructura','${doc.id}','nod',this.value)"></td><td><input class="editable-cell" value="${c.e}" onchange="actDoc('infraestructura','${doc.id}','e',this.value)"></td><td>${c.co[0]}, ${c.co[1]}</td><td><input type="number" class="editable-cell" value="${c.o}" onchange="actDoc('infraestructura','${doc.id}','o',this.value)"></td><td><input type="number" class="editable-cell" value="${c.l}" onchange="actDoc('infraestructura','${doc.id}','l',this.value)"></td></tr>`;
+                    L.circleMarker(c.co, {radius:7, color: c.e==='RAMAL'?'blue':'purple', fillColor:'#fff', fillOpacity:0.9}).addTo(map).bindPopup(`<b>${c.n}</b><br>Nodo: ${c.nod||'-'}`);
                 });
                 document.getElementById('tb-naps').innerHTML = h;
             });
         }
 
-        function actualizarCaja(id, campo, valor) {
-            let v = (campo==='o'||campo==='l') ? parseInt(valor) : valor;
-            db.collection("infraestructura").doc(id).update({ [campo]: v });
-        }
-
         function cargarTodo() {
-            // Facturas
             db.collection("facturas").orderBy("ff", "desc").onSnapshot(snap => {
-                let h = "";
-                snap.forEach(doc => {
-                    let x = doc.data();
-                    let cl = x.o === 'ANDRETHO' ? 'bg-andretho' : 'bg-ramal';
-                    h += `<tr><td>${x.n}</td><td>${x.c}</td><td>${x.m} Bs</td><td><span class="badge ${cl}">${x.o || 'RAMAL'}</span></td><td>${x.sec || '-'}</td><td>${x.f}</td><td>${x.h}</td><td><button class="bg-rojo btn-accion" onclick="eliminar('facturas','${doc.id}')">X</button></td></tr>`;
+                let h = ""; snap.forEach(doc => {
+                    let x = doc.data(); let cl = x.o === 'ANDRETHO' ? 'bg-andretho' : 'bg-ramal';
+                    h += `<tr><td>${x.n}</td><td>${x.c}</td><td>${x.m} Bs</td><td><span class="badge ${cl}">${x.o}</span></td><td>${x.sec}</td><td>${x.f}</td><td>${x.h}</td><td><button class="bg-rojo btn-accion" onclick="eliminar('facturas','${doc.id}')">X</button></td></tr>`;
                 });
                 document.getElementById('tb-f').innerHTML = h;
             });
 
-            // Inventario
             db.collection("inventario").onSnapshot(snap => {
-                let h = "";
-                snap.forEach(doc => {
+                let h = ""; snap.forEach(doc => {
                     let x = doc.data();
-                    h += `<tr><td>${x.n}</td><td><input type="number" class="editable-cell" value="${x.c}" onchange="actualizarDato('inventario','${doc.id}','c',this.value)"></td><td><button class="bg-rojo btn-accion" onclick="eliminar('inventario','${doc.id}')">X</button></td></tr>`;
+                    h += `<tr><td>${x.n}</td><td><input type="number" class="editable-cell" value="${x.c}" onchange="actDoc('inventario','${doc.id}','c',this.value)"></td><td><button class="bg-rojo btn-accion" onclick="eliminar('inventario','${doc.id}')">X</button></td></tr>`;
                 });
                 document.getElementById('tb-i').innerHTML = h;
             });
 
-            // Tickets
+            // Tickets con Estados Programada, Ejecutada, Reprogramar
             db.collection("tickets").orderBy("f", "desc").onSnapshot(snap => {
                 let hPend = "", hRamal = "", hAnd = "";
                 snap.forEach(doc => {
                     let x = doc.data();
-                    let clEmp = x.emp === 'ANDRETHO' ? 'bg-andretho' : 'bg-ramal';
+                    let cl = x.emp === 'ANDRETHO' ? 'bg-andretho' : 'bg-ramal';
                     if (x.s !== 'Ejecutada') {
-                        hPend += `<tr><td><span class="badge ${clEmp}">${x.emp||'RAMAL'}</span></td><td>${x.c}</td><td>${x.tel||''}</td><td>${x.d||''}</td><td>${x.z||''}</td><td>${x.coor||''}</td><td>${x.t}</td><td>${x.tec||''}</td><td>${x.f}</td><td>${x.h||'-'}</td><td class="st-${x.s}">${x.s}</td><td><button class="bg-azul btn-accion" onclick="rotarEstado('${doc.id}','${x.s}')"><i class="fas fa-sync"></i></button><button class="bg-rojo btn-accion" onclick="eliminar('tickets','${doc.id}')">X</button></td></tr>`;
+                        hPend += `<tr>
+                            <td><span class="badge ${cl}">${x.emp}</span></td>
+                            <td>${x.c}</td><td>${x.tel}</td><td>${x.d}</td><td>${x.z}</td><td>${x.coor}</td><td>${x.t}</td><td>${x.tec}</td><td>${x.f}</td><td>${x.h}</td>
+                            <td class="st-${x.s}">${x.s}</td>
+                            <td class="no-pdf">
+                                <button class="bg-azul btn-accion" onclick="cambiarEstadoTicket('${doc.id}','Ejecutada')" title="Finalizar"><i class="fas fa-check"></i></button>
+                                <button class="bg-rojo btn-accion" onclick="cambiarEstadoTicket('${doc.id}','Reprogramar')" title="Reprogramar"><i class="fas fa-redo"></i></button>
+                                <button class="bg-gris btn-accion" onclick="cambiarEstadoTicket('${doc.id}','Programada')" title="Pendiente"><i class="fas fa-clock"></i></button>
+                            </td>
+                        </tr>`;
                     } else {
-                        let filaH = `<tr><td>${x.c}</td><td>${x.z||''}</td><td>${x.t}</td><td>${x.tec||''}</td><td>${x.f}</td><td>${x.h||'-'}</td><td class="st-Ejecutada">Ejecutada</td><td><button class="bg-rojo btn-accion" onclick="eliminar('tickets','${doc.id}')">X</button></td></tr>`;
-                        if (x.emp === 'ANDRETHO') hAnd += filaH; else hRamal += filaH;
+                        let fila = `<tr><td>${x.c}</td><td>${x.z}</td><td>${x.t}</td><td>${x.tec}</td><td>${x.f}</td><td>${x.h}</td><td class="st-Ejecutada">Ejecutada</td><td><button class="bg-rojo btn-accion" onclick="eliminar('tickets','${doc.id}')">X</button></td></tr>`;
+                        if(x.emp === 'ANDRETHO') hAnd += fila; else hRamal += fila;
                     }
                 });
                 document.getElementById('tb-t-prog').innerHTML = hPend;
                 document.getElementById('tb-t-h-ramal').innerHTML = hRamal;
                 document.getElementById('tb-t-h-and').innerHTML = hAnd;
             });
-        }
 
-        function rotarEstado(id, actual) {
-            const estados = ["Programada", "Ejecutada", "Suspendida", "Cancelada"];
-            let nuevo = estados[(estados.indexOf(actual) + 1) % estados.length];
-            db.collection("tickets").doc(id).update({ s: nuevo });
+            db.collection("bajas").orderBy("f", "desc").onSnapshot(snap => {
+                let hP = "", hH = "";
+                snap.forEach(doc => {
+                    let b = doc.data();
+                    let cl = b.r === 'ANDRETHO' ? 'bg-andretho' : 'bg-ramal';
+                    if (b.s === 'Pendiente') {
+                        hP += `<tr><td><span class="badge ${cl}">${b.r}</span></td><td>${b.n}</td><td>${b.z}</td><td>${b.t}</td><td>${b.f} ${b.h}</td><td>${b.tu}</td><td class="st-Pendiente">Pendiente</td><td><button class="bg-azul btn-accion" onclick="actDoc('bajas','${doc.id}','s','Completada')"><i class="fas fa-check"></i></button></td></tr>`;
+                    } else {
+                        hH += `<tr><td><span class="badge ${cl}">${b.r}</span></td><td>${b.n}</td><td>${b.z}</td><td>${b.f}</td><td>${b.tu}</td><td class="st-Completada">Completada</td><td><button class="bg-rojo btn-accion" onclick="eliminar('bajas','${doc.id}')">X</button></td></tr>`;
+                    }
+                });
+                document.getElementById('tb-bajas-list-pend').innerHTML = hP;
+                document.getElementById('tb-bajas-list-hist').innerHTML = hH;
+            });
         }
 
         function addT() {
@@ -303,15 +281,24 @@
                 d: document.getElementById('tder').value, z: document.getElementById('tz').value,
                 coor: document.getElementById('tcoor').value, emp: document.getElementById('tempre').value,
                 t: document.getElementById('tt').value, tec: document.getElementById('ttec').value,
-                f: document.getElementById('tf').value, h: document.getElementById('th_ticket').value,
-                s: 'Programada'
+                f: document.getElementById('tf').value, h: document.getElementById('th_ticket').value, s: 'Programada'
             });
         }
 
-        function actualizarDato(col, id, campo, valor) { db.collection(col).doc(id).update({ [campo]: (campo==='c'?parseInt(valor):valor) }); }
+        function addBaja() {
+            db.collection("bajas").add({
+                n: document.getElementById('bn').value, z: document.getElementById('bz').value,
+                t: document.getElementById('bt').value, r: document.getElementById('br').value,
+                tu: document.getElementById('btu').value, f: document.getElementById('bf').value,
+                h: document.getElementById('bh').value, s: 'Pendiente'
+            });
+        }
+
+        function cambiarEstadoTicket(id, nuevoEstado) { db.collection("tickets").doc(id).update({ s: nuevoEstado }); }
+        function actDoc(col, id, f, v) { db.collection(col).doc(id).update({ [f]: (f==='o'||f==='l'||f==='c'?parseInt(v):v) }); }
         function addF() { db.collection("facturas").add({ n:document.getElementById('fn').value, c:document.getElementById('fc').value, m:document.getElementById('fm').value, o:document.getElementById('fo').value, sec:document.getElementById('fs').value, f:document.getElementById('ff').value, ff:document.getElementById('ff').value, h:document.getElementById('fh').value }); }
         function addI() { db.collection("inventario").add({ n:document.getElementById('in').value, c:document.getElementById('ic').value }); }
-        function eliminar(col, id) { if(confirm('¿Eliminar registro?')) db.collection(col).doc(id).delete(); }
+        function eliminar(col, id) { if(confirm('¿Eliminar?')) db.collection(col).doc(id).delete(); }
 
         function reporteDiario() {
             const hoy = new Date().toISOString().split('T')[0];
@@ -321,7 +308,7 @@
                     let x=doc.data();
                     if(x.o==='ANDRETHO') a+=parseFloat(x.m)||0; else r+=parseFloat(x.m)||0;
                 });
-                alert(`REPORTES DE HOY\n\nRAMAL: ${r} Bs.\nANDRETHO: ${a} Bs.\nTOTAL: ${r+a} Bs.`);
+                alert(`REPORTE DE COBROS HOY\n\nRAMAL: ${r} Bs.\nANDRETHO: ${a} Bs.\nTOTAL: ${r+a} Bs.`);
             });
         }
 
@@ -329,16 +316,7 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('l', 'mm', 'a4');
             doc.text("CERBERUS - " + titulo, 14, 15);
-            doc.autoTable({ 
-                html: '#' + id, 
-                startY: 20,
-                didParseCell: function(data) {
-                    // Ocultar columnas de botones en el PDF
-                    if (data.column.index === 11 || (id !== 'tb-t-pend' && data.column.index === 7)) {
-                        data.cell.text = '';
-                    }
-                }
-            });
+            doc.autoTable({ html: '#' + id, startY: 20, didParseCell: function(d) { if(d.column.index === 7 || d.column.index === 11) d.cell.text = ''; } });
             doc.save(`Reporte_${titulo}.pdf`);
         }
 
