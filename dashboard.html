@@ -40,7 +40,6 @@
         .badge { padding: 3px 6px; border-radius: 4px; font-size: 9px; font-weight: bold; color: white; }
         .bg-ramal { background: #2b6cb0; } .bg-andretho { background: #805ad5; }
         
-        /* Colores de Estados */
         .st-Programada, .st-Pendiente { color: #B7791F; font-weight: bold; }
         .st-Ejecutada, .st-Completada { color: #2F855A; font-weight: bold; }
         .st-Reprogramar { color: #E53E3E; font-weight: bold; }
@@ -67,7 +66,7 @@
             <h1>Panel de Control</h1>
             <div class="card">
                 <h3>Estado del Sistema</h3>
-                <p style="color: #48BB78;"><i class="fas fa-cloud"></i> Sistema Sincronizado</p>
+                <p style="color: #48BB78;"><i class="fas fa-cloud"></i> Sincronización en la nube activa</p>
             </div>
         </div>
 
@@ -75,7 +74,7 @@
             <h1>Infraestructura Satelital</h1>
             <div class="card"><div id="mapa-contenedor"></div></div>
             <div class="card">
-                <h3>Estado de Puertos y Nodos</h3>
+                <h3>Estado de Puertos y Nodos (Firebase Sync)</h3>
                 <table id="tb-naps-container">
                     <thead><tr><th>Nombre</th><th>Nodo</th><th>Empresa</th><th>Coordenadas</th><th>Ocupados</th><th>Libres</th></tr></thead>
                     <tbody id="tb-naps"></tbody>
@@ -147,6 +146,7 @@
                     <input type="text" id="bz" placeholder="Zona">
                     <input type="text" id="bt" placeholder="N° Contacto">
                     <select id="br"><option value="RAMAL">RED RAMAL</option><option value="ANDRETHO">RED ANDRETHO</option></select>
+                    <select id="bsrv"><option value="INTERNET FIBRA">INTERNET FIBRA</option><option value="TV CABLE">TV CABLE</option><option value="DUO (FIBRA+TV)">DUO (FIBRA+TV)</option></select>
                     <select id="btu"><option value="HOGAR">HOGAR</option><option value="PRO">PRO</option><option value="EMPRESARIAL">EMPRESARIAL</option></select>
                     <input type="date" id="bf"> <input type="time" id="bh">
                     <button class="btn-accion bg-rojo" onclick="addBaja()">Programar Baja</button>
@@ -154,13 +154,13 @@
 
                 <h3>BAJAS PENDIENTES <button class="btn-accion bg-gris" onclick="exportarPDF('Bajas_Pendientes', 'tb-b-pend')">PDF</button></h3>
                 <table id="tb-b-pend">
-                    <thead><tr><th>Red</th><th>Cliente</th><th>Zona</th><th>Contacto</th><th>Fecha/Hora</th><th>Tipo</th><th>Estado</th><th class="no-pdf">Acción</th></tr></thead>
+                    <thead><tr><th>Red</th><th>Cliente</th><th>Zona</th><th>Contacto</th><th>Servicio</th><th>Tipo Usuario</th><th>Fecha/Hora</th><th>Estado</th><th class="no-pdf">Acción</th></tr></thead>
                     <tbody id="tb-bajas-list-pend"></tbody>
                 </table>
 
                 <h3>HISTORIAL DE BAJAS <button class="btn-accion bg-gris" onclick="exportarPDF('Historial_Bajas', 'tb-b-hist')">PDF</button></h3>
                 <table id="tb-b-hist">
-                    <thead><tr><th>Red</th><th>Cliente</th><th>Zona</th><th>Fecha</th><th>Tipo</th><th>Estado</th><th class="no-pdf">X</th></tr></thead>
+                    <thead><tr><th>Red</th><th>Cliente</th><th>Zona</th><th>Servicio</th><th>Fecha</th><th>Estado</th><th class="no-pdf">X</th></tr></thead>
                     <tbody id="tb-bajas-list-hist"></tbody>
                 </table>
             </div>
@@ -216,6 +216,7 @@
         }
 
         function cargarTodo() {
+            // Sincronización de Facturas
             db.collection("facturas").orderBy("ff", "desc").onSnapshot(snap => {
                 let h = ""; snap.forEach(doc => {
                     let x = doc.data(); let cl = x.o === 'ANDRETHO' ? 'bg-andretho' : 'bg-ramal';
@@ -224,6 +225,7 @@
                 document.getElementById('tb-f').innerHTML = h;
             });
 
+            // Sincronización de Inventario
             db.collection("inventario").onSnapshot(snap => {
                 let h = ""; snap.forEach(doc => {
                     let x = doc.data();
@@ -232,7 +234,7 @@
                 document.getElementById('tb-i').innerHTML = h;
             });
 
-            // Tickets con Estados Programada, Ejecutada, Reprogramar
+            // Sincronización de Tickets con 3 Estados
             db.collection("tickets").orderBy("f", "desc").onSnapshot(snap => {
                 let hPend = "", hRamal = "", hAnd = "";
                 snap.forEach(doc => {
@@ -244,7 +246,7 @@
                             <td>${x.c}</td><td>${x.tel}</td><td>${x.d}</td><td>${x.z}</td><td>${x.coor}</td><td>${x.t}</td><td>${x.tec}</td><td>${x.f}</td><td>${x.h}</td>
                             <td class="st-${x.s}">${x.s}</td>
                             <td class="no-pdf">
-                                <button class="bg-azul btn-accion" onclick="cambiarEstadoTicket('${doc.id}','Ejecutada')" title="Finalizar"><i class="fas fa-check"></i></button>
+                                <button class="bg-azul btn-accion" onclick="cambiarEstadoTicket('${doc.id}','Ejecutada')" title="Ejecutada"><i class="fas fa-check"></i></button>
                                 <button class="bg-rojo btn-accion" onclick="cambiarEstadoTicket('${doc.id}','Reprogramar')" title="Reprogramar"><i class="fas fa-redo"></i></button>
                                 <button class="bg-gris btn-accion" onclick="cambiarEstadoTicket('${doc.id}','Programada')" title="Pendiente"><i class="fas fa-clock"></i></button>
                             </td>
@@ -259,15 +261,29 @@
                 document.getElementById('tb-t-h-and').innerHTML = hAnd;
             });
 
+            // Sincronización de Bajas con "Tipo de Servicio"
             db.collection("bajas").orderBy("f", "desc").onSnapshot(snap => {
                 let hP = "", hH = "";
                 snap.forEach(doc => {
                     let b = doc.data();
                     let cl = b.r === 'ANDRETHO' ? 'bg-andretho' : 'bg-ramal';
                     if (b.s === 'Pendiente') {
-                        hP += `<tr><td><span class="badge ${cl}">${b.r}</span></td><td>${b.n}</td><td>${b.z}</td><td>${b.t}</td><td>${b.f} ${b.h}</td><td>${b.tu}</td><td class="st-Pendiente">Pendiente</td><td><button class="bg-azul btn-accion" onclick="actDoc('bajas','${doc.id}','s','Completada')"><i class="fas fa-check"></i></button></td></tr>`;
+                        hP += `<tr>
+                            <td><span class="badge ${cl}">${b.r}</span></td>
+                            <td>${b.n}</td><td>${b.z}</td><td>${b.t}</td>
+                            <td style="font-weight:bold; color:red;">${b.srv || 'FIBRA'}</td>
+                            <td>${b.tu}</td><td>${b.f} ${b.h}</td>
+                            <td class="st-Pendiente">Pendiente</td>
+                            <td class="no-pdf"><button class="bg-azul btn-accion" onclick="actDoc('bajas','${doc.id}','s','Completada')"><i class="fas fa-check"></i></button></td>
+                        </tr>`;
                     } else {
-                        hH += `<tr><td><span class="badge ${cl}">${b.r}</span></td><td>${b.n}</td><td>${b.z}</td><td>${b.f}</td><td>${b.tu}</td><td class="st-Completada">Completada</td><td><button class="bg-rojo btn-accion" onclick="eliminar('bajas','${doc.id}')">X</button></td></tr>`;
+                        hH += `<tr>
+                            <td><span class="badge ${cl}">${b.r}</span></td>
+                            <td>${b.n}</td><td>${b.z}</td>
+                            <td>${b.srv || 'FIBRA'}</td>
+                            <td>${b.f}</td><td class="st-Completada">Completada</td>
+                            <td class="no-pdf"><button class="bg-rojo btn-accion" onclick="eliminar('bajas','${doc.id}')">X</button></td>
+                        </tr>`;
                     }
                 });
                 document.getElementById('tb-bajas-list-pend').innerHTML = hP;
@@ -289,6 +305,7 @@
             db.collection("bajas").add({
                 n: document.getElementById('bn').value, z: document.getElementById('bz').value,
                 t: document.getElementById('bt').value, r: document.getElementById('br').value,
+                srv: document.getElementById('bsrv').value, // Nuevo campo: Internet o TV
                 tu: document.getElementById('btu').value, f: document.getElementById('bf').value,
                 h: document.getElementById('bh').value, s: 'Pendiente'
             });
